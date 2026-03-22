@@ -1,0 +1,85 @@
+# Azure / .NET
+bin/
+**/bin/
+obj
+csx
+.vs
+edge
+Publish
+*.user
+*.suo
+*.cscfg
+*.Cache
+project.lock.json
+/packages
+/TestResults
+/tools/NuGet.exe
+/App_Data
+/secrets
+/data
+.secrets
+appsettings.json
+local.settings.json
+
+# Node
+node_modules
+dist
+
+# Python
+.python_packages/
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Logs (generated at runtime)
+logs/
+sync_*.log
+
+# Azurite artifacts
+__blobstorage__
+__queuestorage__
+__azurite_db*__.json
+
+# Sync status (generated at runtime)
+latest_sync_status.json
+
+# OS
+.DS_Store
+
+# VS Code
+.vscode/
+
+# Azure Functions (legacy, not needed for Docker)
+function_app.py
+host.json
+local.settings.json
+.funcignore
+
+# Debug / reference data files
+*.json.template
+All-members.json
+Household-head.json
+api_*.json
+pc-member.json
+qb_customer_fields_report.json
+list.txt
+.env.dms
+
+# One-off utility scripts
+cleanup_qb_customers.py
+diagnose_custom_fields.py
+fetch_qb_customer_fields.py
+list_all_qb_customer_fields.py
+test_sync.py
+
+# Documentation (local only)
+Agents.md
+QuickBooks.md
+README_QB_FIELDS.md

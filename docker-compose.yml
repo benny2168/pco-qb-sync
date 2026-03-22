@@ -1,0 +1,15 @@
+version: "3.8"
+
+services:
+  pco-qb-sync:
+    build: .
+    container_name: pco-qb-sync
+    restart: unless-stopped
+    ports:
+      - "8377:8080"
+    volumes:
+      - ./.env:/app/.env
+      - ./logs:/app/logs
+      - ./config.json:/app/config.json
+    environment:
+      - TZ=America/Chicago

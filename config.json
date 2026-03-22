@@ -1,0 +1,23 @@
+{
+    "planning_center": {
+        "base_url": "https://api.planningcenteronline.com",
+        "head_of_household_list_id": "2552744"
+    },
+    "quickbooks": {
+        "base_url": "https://sandbox-quickbooks.api.intuit.com",
+        "custom_fields": {
+            "pc_id": "External ID",
+            "nickname": "Nickname",
+            "prayer_group": "PrayerGroup"
+        }
+    },
+    "email": {
+        "smtp_server": "smtp.gmail.com",
+        "smtp_port": 587,
+        "recipient_email": "admin@example.com"
+    },
+    "logging": {
+        "level": "DEBUG",
+        "file": "sync_log.txt"
+    }
+}
