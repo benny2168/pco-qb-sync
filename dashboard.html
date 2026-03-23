@@ -96,18 +96,16 @@
                     <div class="p-2 rounded-xl bg-indigo-500/10 text-indigo-400 shrink-0">
                         <i data-lucide="calendar-clock" class="w-5 h-5"></i>
                     </div>
-                    <div class="flex-1 relative flex items-center">
-                        <select id="scheduleSelect" class="w-full bg-slate-900/50 border border-slate-700/50 rounded-lg px-3 py-1.5 text-xs text-slate-300 focus:outline-none focus:border-indigo-500 transition-colors appearance-none pr-16">
-                            <option value="0 0 3 * * 1">Every Monday at 3:00 AM</option>
-                            <option value="0 0 3 * * *">Daily at 3:00 AM</option>
-                            <option value="0 0 1 * * *">Daily at 1:00 AM</option>
-                            <option value="0 0 */6 * * *">Every 6 Hours</option>
-                            <option value="0 0 */12 * * *">Every 12 Hours</option>
-                            <option value="0 0 3 * * 0">Every Sunday at 3:00 AM</option>
-                            <option value="0 */30 * * * *">Every 30 Minutes</option>
-                            <option value="0 */5 * * * *">Every 5 Minutes (Testing)</option>
+                    <div class="flex-1 flex items-center gap-1.5 flex-wrap">
+                        <select id="schedFrequency" class="bg-slate-900/50 border border-slate-700/50 rounded-lg px-2 py-1.5 text-xs text-slate-300 focus:outline-none focus:border-indigo-500 transition-colors">
+                            <option value="daily">Daily</option>
+                            <option value="weekly">Weekly</option>
+                            <option value="monthly">Monthly</option>
                         </select>
-                        <button id="saveScheduleBtn" class="absolute right-1 px-2 py-1 bg-indigo-600 hover:bg-indigo-500 text-white text-[10px] font-medium rounded opacity-0 pointer-events-none transition-opacity">Save</button>
+                        <select id="schedDay" class="bg-slate-900/50 border border-slate-700/50 rounded-lg px-2 py-1.5 text-xs text-slate-300 focus:outline-none focus:border-indigo-500 transition-colors hidden"></select>
+                        <span class="text-slate-500 text-xs">at</span>
+                        <select id="schedHour" class="bg-slate-900/50 border border-slate-700/50 rounded-lg px-2 py-1.5 text-xs text-slate-300 focus:outline-none focus:border-indigo-500 transition-colors"></select>
+                        <button id="saveScheduleBtn" class="px-2 py-1 bg-indigo-600 hover:bg-indigo-500 text-white text-[10px] font-medium rounded opacity-0 pointer-events-none transition-opacity ml-1">Save</button>
                     </div>
                 </div>
 
@@ -460,13 +458,11 @@
                 }
 
                 if (data.schedule) {
-                    const scheduleSelect = document.getElementById('scheduleSelect');
-                    const saveScheduleBtn = document.getElementById('saveScheduleBtn');
-                    if (document.activeElement !== scheduleSelect) {
-                        scheduleSelect.value = data.schedule;
-                        scheduleSelect.dataset.original = data.schedule;
-                        saveScheduleBtn.classList.replace('opacity-100', 'opacity-0');
-                        saveScheduleBtn.classList.add('pointer-events-none');
+                    if (!scheduleUIFocused()) {
+                        parseCronToUI(data.schedule);
+                        document.getElementById('saveScheduleBtn').classList.replace('opacity-100', 'opacity-0');
+                        document.getElementById('saveScheduleBtn').classList.add('pointer-events-none');
+                        currentScheduleCron = data.schedule;
                     }
                 }
                 
@@ -531,32 +527,99 @@
             }
         });
 
-        // Schedule Configuration Logic
-        const scheduleSelect = document.getElementById('scheduleSelect');
+        // ── Schedule Configuration Logic ──────────────────────────────────
+        const schedFrequency = document.getElementById('schedFrequency');
+        const schedDay = document.getElementById('schedDay');
+        const schedHour = document.getElementById('schedHour');
         const saveScheduleBtn = document.getElementById('saveScheduleBtn');
-        
-        scheduleSelect.addEventListener('change', () => {
-            if (scheduleSelect.value !== (scheduleSelect.dataset.original || '')) {
+        let currentScheduleCron = '';
+
+        // Populate the hour dropdown (12 AM – 11 PM)
+        for (let h = 0; h < 24; h++) {
+            const lbl = h === 0 ? '12:00 AM' : h < 12 ? `${h}:00 AM` : h === 12 ? '12:00 PM' : `${h-12}:00 PM`;
+            schedHour.insertAdjacentHTML('beforeend', `<option value="${h}">${lbl}</option>`);
+        }
+
+        function populateDayDropdown() {
+            const freq = schedFrequency.value;
+            schedDay.innerHTML = '';
+            if (freq === 'weekly') {
+                const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+                days.forEach((d, i) => schedDay.insertAdjacentHTML('beforeend', `<option value="${i}">${d}</option>`));
+                schedDay.classList.remove('hidden');
+            } else if (freq === 'monthly') {
+                for (let d = 1; d <= 28; d++) {
+                    const suffix = d===1?'st':d===2?'nd':d===3?'rd':'th';
+                    schedDay.insertAdjacentHTML('beforeend', `<option value="${d}">${d}${suffix}</option>`);
+                }
+                schedDay.classList.remove('hidden');
+            } else {
+                schedDay.classList.add('hidden');
+            }
+        }
+
+        function buildCronFromUI() {
+            const freq = schedFrequency.value;
+            const hour = schedHour.value;
+            const day = schedDay.value;
+            // Azure-style 6-field: sec min hour day month dow
+            if (freq === 'daily')   return `0 0 ${hour} * * *`;
+            if (freq === 'weekly')  return `0 0 ${hour} * * ${day}`;
+            if (freq === 'monthly') return `0 0 ${hour} ${day} * *`;
+            return `0 0 ${hour} * * *`;
+        }
+
+        function parseCronToUI(cron) {
+            const p = cron.split(' ');
+            if (p.length !== 6) return;
+            const [, , hour, dayOfMonth, , dayOfWeek] = p;
+            schedHour.value = hour;
+            if (dayOfWeek !== '*') {
+                schedFrequency.value = 'weekly';
+                populateDayDropdown();
+                schedDay.value = dayOfWeek;
+            } else if (dayOfMonth !== '*') {
+                schedFrequency.value = 'monthly';
+                populateDayDropdown();
+                schedDay.value = dayOfMonth;
+            } else {
+                schedFrequency.value = 'daily';
+                populateDayDropdown();
+            }
+        }
+
+        function scheduleUIFocused() {
+            return [schedFrequency, schedDay, schedHour].includes(document.activeElement);
+        }
+
+        function checkScheduleChanged() {
+            const newCron = buildCronFromUI();
+            if (newCron !== currentScheduleCron) {
                 saveScheduleBtn.classList.replace('opacity-0', 'opacity-100');
                 saveScheduleBtn.classList.remove('pointer-events-none');
             } else {
                 saveScheduleBtn.classList.replace('opacity-100', 'opacity-0');
                 saveScheduleBtn.classList.add('pointer-events-none');
             }
-        });
+        }
+
+        schedFrequency.addEventListener('change', () => { populateDayDropdown(); checkScheduleChanged(); });
+        schedDay.addEventListener('change', checkScheduleChanged);
+        schedHour.addEventListener('change', checkScheduleChanged);
+        populateDayDropdown(); // initial render
 
         saveScheduleBtn.addEventListener('click', async () => {
-            const newSchedule = scheduleSelect.value;
+            const newCron = buildCronFromUI();
             saveScheduleBtn.innerText = '...';
             saveScheduleBtn.disabled = true;
             try {
                 const res = await fetch('/api/config/schedule', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ schedule: newSchedule })
+                    body: JSON.stringify({ schedule: newCron })
                 });
                 if (res.ok) {
-                    scheduleSelect.dataset.original = newSchedule;
+                    currentScheduleCron = newCron;
                     saveScheduleBtn.classList.replace('opacity-100', 'opacity-0');
                     saveScheduleBtn.classList.add('pointer-events-none');
                 }
