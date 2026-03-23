@@ -92,11 +92,23 @@
             <div class="glass-card rounded-2xl p-5 flex flex-col justify-center gap-3">
                 <h3 class="text-xs font-semibold tracking-wider text-slate-400 uppercase">Sync Config</h3>
                 
-                <div class="flex items-center gap-3">
+                <div class="flex items-center gap-2">
                     <div class="p-2 rounded-xl bg-indigo-500/10 text-indigo-400 shrink-0">
                         <i data-lucide="calendar-clock" class="w-5 h-5"></i>
                     </div>
-                    <p id="scheduleCardText" class="font-semibold text-sm text-slate-200 leading-tight">Loading...</p>
+                    <div class="flex-1 relative flex items-center">
+                        <select id="scheduleSelect" class="w-full bg-slate-900/50 border border-slate-700/50 rounded-lg px-3 py-1.5 text-xs text-slate-300 focus:outline-none focus:border-indigo-500 transition-colors appearance-none pr-16">
+                            <option value="0 0 3 * * 1">Every Monday at 3:00 AM</option>
+                            <option value="0 0 3 * * *">Daily at 3:00 AM</option>
+                            <option value="0 0 1 * * *">Daily at 1:00 AM</option>
+                            <option value="0 0 */6 * * *">Every 6 Hours</option>
+                            <option value="0 0 */12 * * *">Every 12 Hours</option>
+                            <option value="0 0 3 * * 0">Every Sunday at 3:00 AM</option>
+                            <option value="0 */30 * * * *">Every 30 Minutes</option>
+                            <option value="0 */5 * * * *">Every 5 Minutes (Testing)</option>
+                        </select>
+                        <button id="saveScheduleBtn" class="absolute right-1 px-2 py-1 bg-indigo-600 hover:bg-indigo-500 text-white text-[10px] font-medium rounded opacity-0 pointer-events-none transition-opacity">Save</button>
+                    </div>
                 </div>
 
                 <div class="flex items-center gap-2 mt-1">
@@ -164,7 +176,6 @@
         let logContentCache = {}; // { filename: text }
 
         // Elements
-        const scheduleCardText = document.getElementById('scheduleCardText');
         const syncNowBtn = document.getElementById('syncNowBtn');
         const syncNowText = document.getElementById('syncNowText');
         const syncNowIcon = document.getElementById('syncNowIcon');
@@ -449,11 +460,14 @@
                 }
 
                 if (data.schedule) {
-                    let prettySchedule = data.schedule;
-                    if (prettySchedule === '0 0 1 * * *') prettySchedule = 'Daily at 1:00 AM';
-                    else if (prettySchedule === '0 0 3 * * 1') prettySchedule = 'Every Monday at 3:00 AM';
-                    else if (prettySchedule === '0 */5 * * * *') prettySchedule = 'Every 5 Minutes';
-                    scheduleCardText.innerText = prettySchedule;
+                    const scheduleSelect = document.getElementById('scheduleSelect');
+                    const saveScheduleBtn = document.getElementById('saveScheduleBtn');
+                    if (document.activeElement !== scheduleSelect) {
+                        scheduleSelect.value = data.schedule;
+                        scheduleSelect.dataset.original = data.schedule;
+                        saveScheduleBtn.classList.replace('opacity-100', 'opacity-0');
+                        saveScheduleBtn.classList.add('pointer-events-none');
+                    }
                 }
                 
                 if (data.recipient_email !== undefined) {
@@ -514,6 +528,41 @@
                     syncNowIcon.classList.remove('animate-spin');
                     lucide.createIcons();
                 }, 2000);
+            }
+        });
+
+        // Schedule Configuration Logic
+        const scheduleSelect = document.getElementById('scheduleSelect');
+        const saveScheduleBtn = document.getElementById('saveScheduleBtn');
+        
+        scheduleSelect.addEventListener('change', () => {
+            if (scheduleSelect.value !== (scheduleSelect.dataset.original || '')) {
+                saveScheduleBtn.classList.replace('opacity-0', 'opacity-100');
+                saveScheduleBtn.classList.remove('pointer-events-none');
+            } else {
+                saveScheduleBtn.classList.replace('opacity-100', 'opacity-0');
+                saveScheduleBtn.classList.add('pointer-events-none');
+            }
+        });
+
+        saveScheduleBtn.addEventListener('click', async () => {
+            const newSchedule = scheduleSelect.value;
+            saveScheduleBtn.innerText = '...';
+            saveScheduleBtn.disabled = true;
+            try {
+                const res = await fetch('/api/config/schedule', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ schedule: newSchedule })
+                });
+                if (res.ok) {
+                    scheduleSelect.dataset.original = newSchedule;
+                    saveScheduleBtn.classList.replace('opacity-100', 'opacity-0');
+                    saveScheduleBtn.classList.add('pointer-events-none');
+                }
+            } finally {
+                saveScheduleBtn.innerText = 'Save';
+                saveScheduleBtn.disabled = false;
             }
         });
 

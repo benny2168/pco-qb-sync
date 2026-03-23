@@ -59,9 +59,20 @@ def run_scheduled_sync():
 
 def start_scheduler():
     """Start the APScheduler with the SYNC_SCHEDULE from env."""
+    if not scheduler.running:
+        scheduler.start()
+    reschedule_sync()
+
+def reschedule_sync():
+    """Add or update the sync cron job based on current SYNC_SCHEDULE env var."""
     schedule_expr = os.getenv('SYNC_SCHEDULE', '')
     if not schedule_expr:
         logging.warning("SYNC_SCHEDULE not set. No automatic sync will run.")
+        # Remove existing job if schedule is cleared
+        try:
+            scheduler.remove_job('pco_qb_sync')
+        except Exception:
+            pass
         return
 
     cron_fields = parse_azure_cron(schedule_expr)
@@ -71,8 +82,7 @@ def start_scheduler():
 
     trigger = CronTrigger(**cron_fields)
     scheduler.add_job(run_scheduled_sync, trigger, id='pco_qb_sync', replace_existing=True)
-    scheduler.start()
-    logging.info(f"Scheduler started with SYNC_SCHEDULE = {schedule_expr}")
+    logging.info(f"Scheduler (re)configured with SYNC_SCHEDULE = {schedule_expr}")
 
 # ---------------------------------------------------------------------------
 # Routes — Dashboard
@@ -161,6 +171,32 @@ def api_save_email():
         return jsonify({"status": "Success", "email": email})
     except Exception as e:
         logging.error(f"Failed to save email config: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/config/schedule', methods=['POST'])
+def api_save_schedule():
+    """Saves sync schedule to .env and live-reschedules the cron job."""
+    try:
+        data = request.get_json()
+        schedule = data.get('schedule', '').strip()
+
+        if schedule:
+            # Validate the expression first
+            cron_fields = parse_azure_cron(schedule)
+            if not cron_fields:
+                return jsonify({"error": "Invalid schedule expression"}), 400
+
+            set_key(ENV_PATH, 'SYNC_SCHEDULE', schedule)
+            os.environ['SYNC_SCHEDULE'] = schedule
+            reschedule_sync()
+            return jsonify({"status": "Success", "schedule": schedule})
+        else:
+            set_key(ENV_PATH, 'SYNC_SCHEDULE', '')
+            os.environ['SYNC_SCHEDULE'] = ''
+            reschedule_sync()
+            return jsonify({"status": "Success", "schedule": ""})
+    except Exception as e:
+        logging.error(f"Failed to save schedule config: {e}")
         return jsonify({"error": str(e)}), 500
 
 # ---------------------------------------------------------------------------
