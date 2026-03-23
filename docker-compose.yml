@@ -11,5 +11,6 @@ services:
       - ./.env:/app/.env
       - ./logs:/app/logs
       - ./config.json:/app/config.json
+      - ./sync_history.json:/app/sync_history.json
     environment:
       - TZ=America/Chicago

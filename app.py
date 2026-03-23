@@ -199,6 +199,20 @@ def api_save_schedule():
         logging.error(f"Failed to save schedule config: {e}")
         return jsonify({"error": str(e)}), 500
 
+@app.route('/api/members')
+def api_members():
+    """Returns all member sync history data."""
+    history_path = os.path.join(BASE_DIR, 'sync_history.json')
+    if os.path.exists(history_path):
+        try:
+            with open(history_path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+            return jsonify(data)
+        except Exception as e:
+            logging.error(f"Error reading sync_history.json: {e}")
+            return jsonify({"error": str(e)}), 500
+    return jsonify({})
+
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------

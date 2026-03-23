@@ -47,8 +47,9 @@ __blobstorage__
 __queuestorage__
 __azurite_db*__.json
 
-# Sync status (generated at runtime)
+# Sync status and history (generated at runtime)
 latest_sync_status.json
+sync_history.json
 
 # OS
 .DS_Store

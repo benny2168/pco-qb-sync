@@ -282,6 +282,42 @@ class SyncRoutine:
             'errors': 0,
             'logs': []
         }
+        
+        # Member sync history tracker
+        self.history_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'sync_history.json')
+        self.member_history = self._load_member_history()
+
+    def _load_member_history(self) -> Dict[str, Any]:
+        """Load existing member sync history from disk."""
+        if os.path.exists(self.history_path):
+            try:
+                with open(self.history_path, 'r', encoding='utf-8') as f:
+                    return json.load(f)
+            except Exception as e:
+                logging.warning(f"Could not load sync_history.json: {e}")
+        return {}
+
+    def _save_member_history(self):
+        """Persist member history to disk."""
+        try:
+            with open(self.history_path, 'w', encoding='utf-8') as f:
+                json.dump(self.member_history, f, indent=2)
+        except Exception as e:
+            logging.error(f"Failed to save sync_history.json: {e}")
+
+    def _record_member_event(self, pc_id: str, name: str, action: str, detail: str = ""):
+        """Append an event to a member's sync history."""
+        if pc_id not in self.member_history:
+            self.member_history[pc_id] = {'name': name, 'events': []}
+        # Always update name to latest
+        self.member_history[pc_id]['name'] = name
+        self.member_history[pc_id]['events'].append({
+            'date': datetime.now().isoformat(),
+            'action': action,
+            'detail': detail
+        })
+        # Keep last 100 events per member to prevent unbounded growth
+        self.member_history[pc_id]['events'] = self.member_history[pc_id]['events'][-100:]
 
     def _save_summary_json(self):
         """Save the latest summary to a local JSON file."""
@@ -454,22 +490,27 @@ class SyncRoutine:
                             qb_id_map[pc_id] = updated_qb
                             qb_name_map[person_name] = updated_qb
                             self._log_record("UPDATED", person_name)
+                            self._record_member_event(pc_id, person_name, 'UPDATED', change_reason)
                             self.summary['updated'] += 1
                         else:
                             logging.info(f"Skipping {person_name}: Info was not changed.")
+                            self._record_member_event(pc_id, person_name, 'NO_CHANGE', 'Info was not changed')
                     else:
                         new_qb = self.qb.create_customer(qb_payload)
                         # Link newly created customer in our maps
                         qb_id_map[pc_id] = new_qb
                         qb_name_map[person_name] = new_qb
                         self._log_record("CREATED", person_name)
+                        self._record_member_event(pc_id, person_name, 'CREATED')
                         self.summary['created'] += 1
 
                 except Exception as e:
                     logging.error(f"Error syncing person ID {pc_id}: {e}")
                     self.summary['errors'] += 1
                     self._log_record("ERROR", f"ID {pc_id}", str(e))
+                    self._record_member_event(pc_id, f"ID {pc_id}", 'ERROR', str(e))
 
+            self._save_member_history()
             self.send_summary_email()
             logging.info("Sync Routine completed successfully")
             
