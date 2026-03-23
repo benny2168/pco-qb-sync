@@ -773,13 +773,6 @@
             return badges[action] || `<span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-500/15 text-slate-400">${action}</span>`;
         }
 
-        function formatDate(iso) {
-            try {
-                const d = new Date(iso);
-                return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) + ' ' +
-                       d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
-            } catch { return iso; }
-        }
 
         function renderMemberTable(filter = '') {
             const tbody = document.getElementById('membersBody');
