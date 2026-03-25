@@ -922,6 +922,11 @@
                             toggleLog(logsList[0]);
                         }
                     }
+                    
+                    // Periodically refresh the open log if a sync is active
+                    if (data.status && data.status.status === 'Running' && activeLog) {
+                        fetchLog(activeLog, true);
+                    }
                 }
             } catch (err) {
                 console.error("Failed to fetch Member status:", err);
@@ -963,9 +968,6 @@
         fetchUserInfo();
         fetchStatus();
         fetchDonationStatus();
-        
-        setInterval(fetchStatus, 3000);
-        setInterval(fetchDonationStatus, 3000);
 
         syncNowBtn.addEventListener('click', async () => {
             syncNowBtn.disabled = true;
@@ -1427,8 +1429,21 @@
                 const logs = data.logs || [];
                 if (JSON.stringify(logs) !== JSON.stringify(donationLogsList || []) || isFirstLoadDonation) {
                     isFirstLoadDonation = false;
+                    const currentList = donationLogsList || [];
+                    const isNewLogAtTop = currentList.length > 0 && logs[0] !== currentList[0];
                     donationLogsList = logs;
                     rebuildLogsUI(donationsLogsContainer, donationLogsList, activeDonationLog, 'donation');
+                    
+                    if (!activeDonationLog && logs && logs.length > 0) {
+                        toggleDonationLog(logs[0]);
+                    } else if (isNewLogAtTop && status.status === 'Running') {
+                        toggleDonationLog(logs[0]);
+                    }
+                }
+                
+                // Periodically refresh the open log if a sync is active
+                if (status.status === 'Running' && activeDonationLog) {
+                    fetchLog(activeDonationLog, true);
                 }
             } catch(e) {
                 console.error('Error fetching donation status:', e);
@@ -1521,16 +1536,8 @@
                         setTimeout(() => toggleDonationLog(data.log_file), 500);
                     }
 
-                    // Poll status
-                    const pollInterval = setInterval(async () => {
-                        await fetchDonationStatus();
-                        const statusText = document.getElementById('donStatusText');
-                        if (statusText && !statusText.textContent.includes('Running')) {
-                            clearInterval(pollInterval);
-                            btn.disabled = false;
-                            text.textContent = 'Run Donation Sync';
-                        }
-                    }, 3000);
+                    // The main dashboard polling interval (every 3s) will handle 
+                    // updating the status and the open log content.
                 } else {
                     text.textContent = 'Failed - Retry';
                     btn.disabled = false;
@@ -1668,16 +1675,7 @@
         
         setInterval(() => {
             fetchStatus();
-            const statusText = document.getElementById('statusText');
-            if (statusText && statusText.innerText.includes('Active') && activeLog) {
-                fetchLog(activeLog, true);
-            }
-            
             fetchDonationStatus();
-            const donStatusText = document.getElementById('donStatusText');
-            if (donStatusText && donStatusText.textContent.includes('Running') && activeDonationLog) {
-                fetchLog(activeDonationLog, true);
-            }
         }, 3000);
 
         // Refresh persistent history every 30 seconds
