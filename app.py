@@ -33,8 +33,10 @@ from sync_donations_qb_to_pc import PlanningCenterGivingClient
 BASE_DIR = os.path.dirname(os.path.realpath(__file__))
 # Priority: /app/config/.env, Fallback: /app/.env
 ENV_PATH = os.path.join(BASE_DIR, 'config', '.env')
-if not os.path.exists(ENV_PATH):
-    ENV_PATH = os.path.join(BASE_DIR, '.env')
+if not os.path.isfile(ENV_PATH):
+    fallback_path = os.path.join(BASE_DIR, '.env')
+    if os.path.isfile(fallback_path):
+        ENV_PATH = fallback_path
     
 load_dotenv(dotenv_path=ENV_PATH, override=True)
 
@@ -123,8 +125,13 @@ def update_env_file(key, value):
     if not found:
         new_lines.append(f"{key}='{value}'\n")
     
+    if os.path.isdir(ENV_PATH):
+        logging.error(f"Cannot update .env: {ENV_PATH} is a directory. Check Docker mounts.")
+        return False
+
     with open(ENV_PATH, 'w') as f:
         f.writelines(new_lines)
+    return True
 
 app = Flask(__name__, static_folder='static', static_url_path='/static')
 # Handle reverse proxy headers (X-Forwarded-Proto, X-Forwarded-Host)
