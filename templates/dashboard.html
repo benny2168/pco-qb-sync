@@ -272,9 +272,6 @@
                     <button onclick="clearLogs('member')" class="text-[10px] uppercase tracking-wider font-bold px-3 py-1.5 rounded-lg bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 transition-all border border-rose-500/20 flex items-center gap-2">
                         <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Clear Logs
                     </button>
-                    <button onclick="confirmClearHistory('member')" class="text-[10px] uppercase tracking-wider font-bold px-3 py-1.5 rounded-lg bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 transition-all border border-amber-500/20 flex items-center gap-2">
-                        <i data-lucide="history" class="w-3.5 h-3.5"></i> Clear History
-                    </button>
                 </div>
             </div>
             <div id="logsContainer" class="space-y-4 pb-12">
@@ -288,10 +285,15 @@
         <div id="panel-members" class="hidden">
         <!-- Members Section -->
         <section class="mt-8">
-            <h2 class="text-xl font-semibold text-slate-200 mb-4 flex items-center gap-2">
-                <i data-lucide="users" class="w-5 h-5 text-indigo-400"></i>
-                Member Sync History
-            </h2>
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-semibold text-slate-200 flex items-center gap-2">
+                    <i data-lucide="users" class="w-5 h-5 text-indigo-400"></i>
+                    Member Sync History
+                </h2>
+                <button onclick="confirmClearHistory('member')" class="text-[10px] uppercase tracking-wider font-bold px-3 py-1.5 rounded-lg bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 transition-all border border-amber-500/20 flex items-center gap-2">
+                    <i data-lucide="history" class="w-3.5 h-3.5"></i> Clear History
+                </button>
+            </div>
             <div class="glass-card rounded-2xl p-5">
                 <div class="flex items-center gap-3 mb-4">
                     <div class="relative flex-1">
