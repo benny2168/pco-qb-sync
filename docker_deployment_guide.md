@@ -39,6 +39,22 @@ services:
       # Portainer: Add the environment variables listed below
 ```
 
+**Volumes**: The app expects these directories to exist Relative to the `docker-compose.yml` file:
+    - `./config`: For `config.json` and `.env`
+    - `./data`: For `sync_history.json`, `auth_settings.json`, etc.
+    - `./logs`: For sync logs
+
+### Advanced: Absolute Path Overrides
+If you prefer to store your data in a specific location on your Synology NAS (outside the repository folder), you can create a `.env` file **next to the `docker-compose.yml`** on the NAS with the following:
+
+```env
+PCO_CONFIG_DIR=/volume1/docker/pco-qb-sync/config
+PCO_DATA_DIR=/volume1/docker/pco-qb-sync/data
+PCO_LOGS_DIR=/volume1/docker/pco-qb-sync/logs
+```
+
+By default, it will use `./config`, `./data`, and `./logs`.
+
 ## Persistent Volume Mounts
 
 To ensure your configuration and sync history persist between container updates, you MUST bind the following host paths to the container. 
