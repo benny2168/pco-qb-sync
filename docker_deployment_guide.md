@@ -109,6 +109,12 @@ You can also enter the variables directly in the Portainer **Environment variabl
 | `AZURE_REDIRECT_PATH`| Callback path (usually `/callback`) |
 | `AZURE_SCOPE` | Entra ID Scopes (`User.Read GroupMember.Read.All`) |
 | `FLASK_SECRET_KEY` | Random string for session security |
+| `PCO_CONFIG_DIR` | `/volume1/docker/pco-qb-sync/config` |
+| `PCO_DATA_DIR` | `/volume1/docker/pco-qb-sync/data` |
+| `PCO_LOGS_DIR` | `/volume1/docker/pco-qb-sync/logs` |
+
+> [!IMPORTANT]
+> **Priority**: Portainer UI Environment Variables take priority over any `.env` file in the repository. For Synology deployments, **always** set the `PCO_..._DIR` variables in the Portainer UI to ensure bind mounts resolve to your physical NAS folders instead of Portainer's internal stack folder.
 
 ## Troubleshooting
 
@@ -119,8 +125,13 @@ This means Docker cannot find the folder on your Synology NAS.
     *   Right-click the `pco-qb-sync` folder.
     *   Select **Properties**.
     *   Copy the **Location** field (e.g., `/volume1/docker/pco-qb-sync`). 
-    *   If yours says `/volume2/...` or something different, you **must** update the `docker-compose.yml` to match.
-2.  **Manual Creation**: Ensure you have actually created the `config`, `data`, and `logs` subfolders inside `pco-qb-sync`.
+    *   If yours says `/volume2/...` or something different, you **must** update the `PCO_..._DIR` environment variables in Portainer to match.
+2.  **Environment Variables in Portainer**:
+    *   In Portainer, go to your Stack > **Editor**.
+    *   Scroll down to **Environment variables**.
+    *   Add `PCO_CONFIG_DIR`, `PCO_DATA_DIR`, and `PCO_LOGS_DIR` with their absolute Synology paths (e.g., `/volume1/docker/pco-qb-sync/data`).
+    *   **Crucial**: If these are missing, Portainer tries to use `./data` inside its internal stack folder (`/data/compose/<id>/data`), which doesn't exist, causing the "Bind mount failed" error.
+3.  **Manual Creation**: Ensure you have actually created the `config`, `data`, and `logs` subfolders inside `pco-qb-sync` on the NAS via File Station.
 3.  **Permissions**: Ensure the `docker` user group has Read/Write permissions to these folders.
 
 ### "failed to read dockerfile" or "config.json not found"
