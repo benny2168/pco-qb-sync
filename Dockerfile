@@ -11,7 +11,6 @@ COPY app.py .
 COPY sync_pc_to_qb.py .
 COPY sync_donations_qb_to_pc.py .
 COPY templates templates
-COPY config.json .
 COPY static static
 
 # Create necessary directories
