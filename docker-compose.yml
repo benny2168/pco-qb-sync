@@ -8,8 +8,8 @@ services:
     ports:
       - "8337:8080"
     volumes:
-      - ./config:/app/config
-      - ./data:/app/data
-      - ./logs:/app/logs
+      - /volume1/docker/pco-qb-sync/config:/app/config
+      - /volume1/docker/pco-qb-sync/data:/app/data
+      - /volume1/docker/pco-qb-sync/logs:/app/logs
     environment:
       - TZ=America/Chicago
