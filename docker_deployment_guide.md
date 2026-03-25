@@ -8,8 +8,6 @@ The following `docker-compose.yml` is optimized for production. It uses port **8
 
 ```yaml
 version: "3.8"
-
-services:
   pco-qb-sync:
     image: pco-qb-sync:latest # Ensure you build the image first or point to your registry
     container_name: pco-qb-sync
@@ -17,12 +15,9 @@ services:
     ports:
       - "8337:8080"
     volumes:
+      - ./config:/app/config
+      - ./data:/app/data
       - ./logs:/app/logs
-      - ./config.json:/app/config.json
-      - ./member_sync_history.json:/app/member_sync_history.json
-      - ./sync_history.json:/app/sync_history.json
-      - ./donation_sync_state.json:/app/donation_sync_state.json
-      - ./donation_sync_settings.json:/app/donation_sync_settings.json
     environment:
       - TZ=America/Chicago
       # Portainer: Add the environment variables listed below
@@ -34,12 +29,12 @@ To ensure your configuration and sync history persist between container updates,
 
 | Host Path | Container Path | Description |
 |-----------|----------------|-------------|
+| `./config` | `/app/config` | Stores `.env` and `config.json` |
+| `./data` | `/app/data` | Stores all persistent state (auth, sync history, cursor) |
 | `./logs` | `/app/logs` | Sync logs and server logs |
-| `./config.json` | `/app/config.json` | Application configuration |
-| `./member_sync_history.json` | `/app/member_sync_history.json` | Member sync records |
-| `./sync_history.json` | `/app/sync_history.json` | General sync history |
-| `./donation_sync_state.json` | `/app/donation_sync_state.json` | Donation sync cursor/state |
-| `./donation_sync_settings.json` | `/app/donation_sync_settings.json` | Donation specific settings |
+
+> [!TIP]
+> **Migration Note**: If you are upgrading from an older version, move your `.env` and `config.json` files from the root into the `./config/` directory on your host before starting the container.
 
 > [!IMPORTANT]
 > Ensure the user running the Docker daemon has write permissions to these host directories/files.

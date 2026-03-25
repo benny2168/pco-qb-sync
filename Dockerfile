@@ -14,8 +14,8 @@ COPY templates templates
 COPY config.json .
 COPY static static
 
-# Create logs directory
-RUN mkdir -p /app/logs
+# Create necessary directories
+RUN mkdir -p /app/config /app/data /app/logs
 
 EXPOSE 8080
 

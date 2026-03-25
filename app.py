@@ -31,7 +31,11 @@ from sync_donations_qb_to_pc import PlanningCenterGivingClient
 # Bootstrap
 # ---------------------------------------------------------------------------
 BASE_DIR = os.path.dirname(os.path.realpath(__file__))
-ENV_PATH = os.path.join(BASE_DIR, '.env')
+# Priority: /app/config/.env, Fallback: /app/.env
+ENV_PATH = os.path.join(BASE_DIR, 'config', '.env')
+if not os.path.exists(ENV_PATH):
+    ENV_PATH = os.path.join(BASE_DIR, '.env')
+    
 load_dotenv(dotenv_path=ENV_PATH, override=True)
 
 AUTH_SETTINGS_PATH = os.path.join(BASE_DIR, 'data', 'auth_settings.json')
@@ -259,6 +263,22 @@ def run_scheduled_donation_sync():
         routine.run()
     except Exception as e:
         logging.error(f"Scheduled donation sync failed: {e}", exc_info=True)
+
+def load_config(config_path=None):
+    """Load configuration from config.json (priority: /app/config/config.json)."""
+    if not config_path:
+        config_path = os.path.join(BASE_DIR, 'config', 'config.json')
+        if not os.path.exists(config_path):
+            config_path = os.path.join(BASE_DIR, 'config.json')
+        
+    if not os.path.exists(config_path):
+        return {}
+    try:
+        with open(config_path, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except Exception as e:
+        logging.error(f"Error loading config: {e}")
+        return {}
 
 def reschedule_donation_sync():
     """Update the donation sync job based on donation_sync_settings.json."""

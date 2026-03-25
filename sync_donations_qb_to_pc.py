@@ -14,6 +14,13 @@ from datetime import datetime, timedelta
 from typing import List, Dict, Any, Optional
 from dotenv import load_dotenv
 
+# Load environment variables from .env file (priority: config/.env)
+dotenv_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'config', '.env')
+if os.path.exists(dotenv_path):
+    load_dotenv(dotenv_path=dotenv_path, override=True)
+else:
+    load_dotenv()
+
 # ---------------------------------------------------------------------------
 # Planning Center Giving API Client
 # ---------------------------------------------------------------------------

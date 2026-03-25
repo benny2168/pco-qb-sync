@@ -11,14 +11,23 @@ from datetime import datetime
 from typing import List, Dict, Any, Optional
 from dotenv import load_dotenv
 
-# Load environment variables from .env file
-load_dotenv()
+# Load environment variables from .env file (priority: config/.env)
+dotenv_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'config', '.env')
+if os.path.exists(dotenv_path):
+    load_dotenv(dotenv_path=dotenv_path, override=True)
+else:
+    load_dotenv()
 
 # Load configuration
-def load_config(config_path: str = 'config.json') -> Dict[str, Any]:
+def load_config(config_path: Optional[str] = None) -> Dict[str, Any]:
+    if not config_path:
+        config_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'config', 'config.json')
+        if not os.path.exists(config_path):
+            config_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'config.json')
+
     if not os.path.exists(config_path):
         raise FileNotFoundError(f"Config file not found: {config_path}")
-    with open(config_path, 'r') as f:
+    with open(config_path, 'r', encoding='utf-8') as f:
         return json.load(f)
 
 # Logs helper

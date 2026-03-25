@@ -8,14 +8,8 @@ services:
     ports:
       - "8337:8080"
     volumes:
-      - ./.env:/app/.env
-      - ./logs:/app/logs
-      - ./config.json:/app/config.json
-      - ./app.py:/app/app.py
-      - ./sync_pc_to_qb.py:/app/sync_pc_to_qb.py
-      - ./sync_donations_qb_to_pc.py:/app/sync_donations_qb_to_pc.py
-      - ./dashboard.html:/app/dashboard.html
+      - ./config:/app/config
       - ./data:/app/data
-      - ./static:/app/static
+      - ./logs:/app/logs
     environment:
       - TZ=America/Chicago
