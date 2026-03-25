@@ -10,10 +10,15 @@ For Synology deployments, it is recommended to use the **Repository** method in 
 5. **Compose path**: `docker-compose.yml`
 
 ### 2. Docker Compose Configuration
-Ensure your `docker-compose.yml` uses the following structure. 
+The `docker-compose.yml` is automatically pulled from your GitHub repository. Since the repository already contains the updated volume mappings, you don't need to manually enter them in Portainer.
 
 > [!IMPORTANT]
-> When using the **Repository** method, the `build: .` directive works correctly because Portainer clones the entire repository onto the NAS.
+> **Host Preparation**: Before deploying the stack, you must manually create the following folders on your Synology NAS (e.g., via File Station):
+> *   `/volume1/docker/pco-qb-sync/config` (Place your `.env` and `config.json` here)
+> *   `/volume1/docker/pco-qb-sync/data`
+> *   `/volume1/docker/pco-qb-sync/logs`
+
+When using the **Repository** method, the `build: .` directive works correctly because Portainer clones the entire repository onto the NAS.
 
 ```yaml
 version: "3.8"
