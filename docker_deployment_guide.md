@@ -58,9 +58,19 @@ To ensure your configuration and sync history persist between container updates,
 > [!IMPORTANT]
 > Ensure the user running the Docker daemon has write permissions to these host directories/files.
 
-## Portainer Environment Variables
+## Environment Variables Management
 
-When deploying via Portainer, enter the following keys in the **Environment variables** section:
+You have two options for managing your environment variables:
+
+### Option A: Folder-Based (Recommended)
+Simply place your `.env` file into the `/volume1/docker/pco-qb-sync/config` folder on your Synology. 
+*   **Pros**: You don't need to touch the Portainer UI for environment variables.
+*   **How it works**: The application is configured to look for `.env` inside `/app/config/` automatically.
+
+### Option B: Portainer UI
+You can also enter the variables directly in the Portainer **Environment variables** section when creating the stack.
+*   **Pros**: Easy to edit directly in the browser.
+*   **Note**: If you do this, you don't need a physical `.env` file on the NAS.
 
 | Variable | Description |
 |----------|-------------|
