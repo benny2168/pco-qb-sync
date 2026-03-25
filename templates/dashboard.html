@@ -1600,47 +1600,12 @@
             try {
                 const res = await fetch('/api/donations');
                 donationData = await res.json();
-                renderDonationTable();
-                renderMemberTable(); // Also refresh member table to include new donation actions
+                renderMemberTable(); // Refresh member table to include new donation actions
             } catch(e) {
                 console.error('Failed to fetch donations:', e);
             }
         }
 
-        function renderDonationTable(filter = '') {
-            const tbody = document.getElementById('donationsBody');
-            const countEl = document.getElementById('donationCount');
-            const entries = Object.entries(donationData).map(([id, d]) => ({
-                id, donor: d.donor_name, events: d.events || [],
-                lastEvent: (d.events && d.events.length) ? d.events[d.events.length - 1] : null
-            }));
-
-            const filtered = filter
-                ? entries.filter(e => e.donor.toLowerCase().includes(filter) || e.id.includes(filter))
-                : entries;
-
-            filtered.sort((a, b) => {
-                const dateA = a.lastEvent ? new Date(a.lastEvent.date) : new Date(0);
-                const dateB = b.lastEvent ? new Date(b.lastEvent.date) : new Date(0);
-                return dateB - dateA;
-            });
-
-            countEl.textContent = `${filtered.length} transaction${filtered.length !== 1 ? 's' : ''}`;
-
-            if (!filtered.length) {
-                tbody.innerHTML = '<tr><td colspan="4" class="text-center py-8 text-slate-500">No transactions found</td></tr>';
-                return;
-            }
-
-            tbody.innerHTML = filtered.map(d => `
-                <tr class="hover:bg-slate-800/40 cursor-pointer transition-colors" onclick="openDonationModal('${d.id}')">
-                    <td class="px-4 py-2.5 font-medium text-slate-200">${d.donor}</td>
-                    <td class="px-4 py-2.5 text-slate-500 font-mono text-xs">${d.id}</td>
-                    <td class="px-4 py-2.5 text-center">${d.lastEvent ? getActionBadge(d.lastEvent.action) : '-'}</td>
-                    <td class="px-4 py-2.5 text-right text-slate-400 text-xs">${d.lastEvent ? formatDate(d.lastEvent.date) : '-'}</td>
-                </tr>
-            `).join('');
-        }
 
         function openDonationModal(txnId) {
             const data = donationData[txnId];
