@@ -184,7 +184,10 @@ class QuickBooksClient:
             self.refresh_token = data['refresh_token']
             
             # Save the new refresh token back to .env
-            env_path = os.path.join(os.path.dirname(__file__), '.env')
+            env_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'config', '.env')
+            if not os.path.exists(env_path):
+                env_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), '.env')
+            
             if os.path.exists(env_path):
                 try:
                     # Manual update to avoid atomic rename (which fails in Docker single-file volumes)
@@ -242,12 +245,14 @@ class QuickBooksClient:
         for cf in flat_fields:
             name = cf.get('Name')
             def_id = cf.get('DefinitionId')
+            is_active = cf.get('BooleanValue', True) # Default to True if not specified (Advanced fields)
             
-            # For QBO Plus, the 'Name' is the label you see in the UI.
-            # However, if not fully enabled, it might show 'SalesFormsPrefs.UseSalesCustom1' etc.
-            if name and def_id:
-                self.discovered_definitions[name] = def_id
-                self.active_custom_field_names.add(name)
+            if name:
+                self.discovered_definitions[name] = def_id or name
+                if is_active:
+                    self.active_custom_field_names.add(name)
+                else:
+                    logging.debug(f"QuickBooks: Custom field '{name}' is present but appears INACTIVE in settings.")
                 
         # If discovery found nothing but we are on Plus, we can't assume much 
         # except that the user needs to enable them. 
@@ -399,7 +404,9 @@ class SyncRoutine:
     def __init__(self, config: Dict[str, Any]):
         # Dynamically reload environment variables on every start
         # so manual .env token updates take effect without restarting the app.
-        env_path = os.path.join(os.path.dirname(__file__), '.env')
+        env_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'config', '.env')
+        if not os.path.exists(env_path):
+            env_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), '.env')
         load_dotenv(dotenv_path=env_path, override=True)
 
         self.config = config
@@ -769,10 +776,21 @@ class SyncRoutine:
             self.qb.get_custom_field_definitions()
 
             # Warn about missing custom fields once per run
+            # Warn about missing custom fields once per run
             configured_custom_fields = set(self.qb.custom_fields_map.values())
-            missing_in_qb = configured_custom_fields - self.qb.active_custom_field_names
+            # For validation, we are a bit more permissive: if the field name is found at all (active or not), we'll try to sync it.
+            # If it's totally missing from discovery, we'll really warn.
+            missing_in_qb = configured_custom_fields - set(self.qb.discovered_definitions.keys())
+            
+            # However, for comparison/skipping, we still want to be careful.
+            # I will ensure that names in self.qb.active_custom_field_names also includes the configured labels 
+            # if the user hasn't enabled them yet but wants us to try anyway.
+            for name in configured_custom_fields:
+                if name not in self.qb.active_custom_field_names:
+                    self.qb.active_custom_field_names.add(name)
+
             if missing_in_qb:
-                msg = f"WARNING: The following custom fields are configured but NOT active in QuickBooks: {', '.join(missing_in_qb)}. They will be skipped during sync to prevent redundant updates."
+                msg = f"WARNING: The following custom fields were NOT found in your QuickBooks Preferences: {', '.join(missing_in_qb)}. PCO Sync will attempt fallback IDs (1, 2, 3), but these may fail if the fields are not enabled in QuickBooks Settings."
                 logging.warning(msg)
                 self.summary['logs'].append(msg)
 
