@@ -343,10 +343,10 @@
                     <div>
                         <h3 class="text-xs font-semibold tracking-wider text-slate-400 mb-4 uppercase">Last Sync</h3>
                         <div class="grid grid-cols-2 gap-y-3 text-sm mb-4">
-                            <p class="text-slate-500">Time</p>
-                            <p id="donLastTime" class="font-medium text-slate-200 text-right">--</p>
-                            <p class="text-slate-500">Synced Total</p>
-                            <p id="donSyncedCount" class="font-medium text-slate-200 text-right">--</p>
+                            <p class="text-slate-500">Started</p>
+                            <p id="donStartTime" class="font-medium text-slate-200 text-right">--</p>
+                            <p class="text-slate-500">Duration</p>
+                            <p id="donDuration" class="font-medium text-indigo-400 text-right">--</p>
                         </div>
                     </div>
                     <div class="border-t border-slate-800/50 pt-4">
@@ -1431,9 +1431,18 @@
                 }
 
                 // Last sync info
-                document.getElementById('donLastTime').textContent = state.last_sync_time
-                    ? new Date(state.last_sync_time).toLocaleString() : '--';
-                document.getElementById('donSyncedCount').textContent = state.synced_count ?? '--';
+                document.getElementById('donStartTime').textContent = state.start_time
+                    ? new Date(state.start_time).toLocaleString() : '--';
+                
+                if (state.duration_seconds !== undefined && state.duration_seconds !== null) {
+                    const mins = Math.floor(state.duration_seconds / 60);
+                    const secs = state.duration_seconds % 60;
+                    document.getElementById('donDuration').textContent = mins > 0 
+                        ? `${mins}m ${secs}s` 
+                        : `${secs}s`;
+                } else {
+                    document.getElementById('donDuration').textContent = '--';
+                }
 
                 if (data.next_run) {
                     document.getElementById('donNextSync').innerText = data.next_run;

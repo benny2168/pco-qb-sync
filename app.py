@@ -815,7 +815,10 @@ def api_donation_sync_status():
                 result["state"] = {
                     "last_sync_time": state.get("last_sync_time"),
                     "synced_count": len(state.get("synced_transaction_ids", [])),
-                    "last_summary": state.get("last_summary", {})
+                    "last_summary": state.get("last_summary", {}),
+                    "start_time": result["status"].get("start_time"),
+                    "end_time": result["status"].get("end_time"),
+                    "duration_seconds": result["status"].get("duration_seconds")
                 }
         except Exception:
             pass

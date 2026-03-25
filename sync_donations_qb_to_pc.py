@@ -259,6 +259,7 @@ class DonationSyncRoutine:
             "status": "Running",
             "start_time": datetime.now().isoformat(),
             "end_time": None,
+            "duration_seconds": 0,
             "donations_created": 0,
             "donations_skipped": 0,
             "errors": 0,
@@ -722,6 +723,12 @@ class DonationSyncRoutine:
             # 9. Finalize
             self.summary["status"] = "Success"
             self.summary["end_time"] = datetime.now().isoformat()
+            
+            # Calculate duration
+            start_dt = datetime.fromisoformat(self.summary["start_time"])
+            end_dt = datetime.fromisoformat(self.summary["end_time"])
+            self.summary["duration_seconds"] = int((end_dt - start_dt).total_seconds())
+            
             self._save_summary_status()
             self.send_summary_email()
 
@@ -735,6 +742,15 @@ class DonationSyncRoutine:
             self.summary["status"] = "Failed"
             self.summary["errors"] += 1
             self.summary["end_time"] = datetime.now().isoformat()
+            
+            # Calculate duration even on failure
+            try:
+                start_dt = datetime.fromisoformat(self.summary["start_time"])
+                end_dt = datetime.fromisoformat(self.summary["end_time"])
+                self.summary["duration_seconds"] = int((end_dt - start_dt).total_seconds())
+            except Exception:
+                pass
+                
             self._log_record("FATAL ERROR", str(e))
             self._save_summary_status()
             self.send_summary_email(fatal_error=str(e))
