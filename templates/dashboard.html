@@ -306,10 +306,37 @@
                     <table class="w-full text-sm">
                         <thead>
                             <tr class="bg-slate-800/50 text-left">
-                                <th class="px-4 py-2.5 text-xs font-semibold text-slate-400 uppercase tracking-wider">Name</th>
-                                <th class="px-4 py-2.5 text-xs font-semibold text-slate-400 uppercase tracking-wider">PC ID</th>
-                                <th class="px-4 py-2.5 text-xs font-semibold text-slate-400 uppercase tracking-wider text-center">Last Action</th>
-                                <th class="px-4 py-2.5 text-xs font-semibold text-slate-400 uppercase tracking-wider text-right">Last Synced</th>
+                                <th class="px-4 py-2.5 text-[10px] font-bold text-slate-500 uppercase tracking-widest w-12 text-center">#</th>
+                                <th class="px-4 py-2.5 text-[10px] font-bold text-slate-500 uppercase tracking-widest cursor-pointer group" onclick="setMemberSort('firstName')">
+                                    <div class="flex items-center gap-1.5">
+                                        First
+                                        <i data-lucide="chevron-down" class="w-2.5 h-2.5 transition-opacity opacity-0 group-hover:opacity-100" id="sort-firstName"></i>
+                                    </div>
+                                </th>
+                                <th class="px-4 py-2.5 text-[10px] font-bold text-slate-500 uppercase tracking-widest cursor-pointer group" onclick="setMemberSort('lastName')">
+                                    <div class="flex items-center gap-1.5">
+                                        Last
+                                        <i data-lucide="chevron-down" class="w-2.5 h-2.5 transition-opacity opacity-0 group-hover:opacity-100" id="sort-lastName"></i>
+                                    </div>
+                                </th>
+                                <th class="px-4 py-2.5 text-[10px] font-bold text-slate-500 uppercase tracking-widest cursor-pointer group" onclick="setMemberSort('pcId')">
+                                    <div class="flex items-center gap-1.5">
+                                        PC ID
+                                        <i data-lucide="chevron-down" class="w-2.5 h-2.5 transition-opacity opacity-0 group-hover:opacity-100" id="sort-pcId"></i>
+                                    </div>
+                                </th>
+                                <th class="px-4 py-2.5 text-[10px] font-bold text-slate-500 uppercase tracking-widest text-center cursor-pointer group" onclick="setMemberSort('action')">
+                                    <div class="flex items-center gap-1.5 justify-center">
+                                        Action
+                                        <i data-lucide="chevron-down" class="w-2.5 h-2.5 transition-opacity opacity-0 group-hover:opacity-100" id="sort-action"></i>
+                                    </div>
+                                </th>
+                                <th class="px-4 py-2.5 text-[10px] font-bold text-slate-500 uppercase tracking-widest text-right cursor-pointer group" onclick="setMemberSort('date')">
+                                    <div class="flex items-center gap-1.5 justify-end">
+                                        Synced
+                                        <i data-lucide="chevron-down" class="w-2.5 h-2.5 transition-opacity opacity-0 group-hover:opacity-100" id="sort-date"></i>
+                                    </div>
+                                </th>
                             </tr>
                         </thead>
                         <tbody id="membersBody" class="divide-y divide-slate-700/30">
@@ -627,6 +654,15 @@
                 indicator.classList.add('bg-slate-600');
                 text.classList.add('text-slate-500');
                 text.innerText = statusLabel + (status.status || 'Idle');
+            }
+
+            // Auto-reset Sync Button if not running
+            if (status.status !== 'Running') {
+                syncNowBtn.disabled = false;
+                syncNowText.innerText = "Run Member Sync";
+                syncNowIcon.setAttribute('data-lucide', 'play');
+                syncNowIcon.classList.remove('animate-spin');
+                lucide.createIcons();
             }
 
             const setElText = (id, val) => {
@@ -1230,6 +1266,18 @@
 
         // ── Member History Logic ──────────────────────────────────────────
         let memberData = {};
+        let memberSortField = 'name';
+        let memberSortOrder = 1; // 1: asc, -1: desc
+
+        function setMemberSort(field) {
+            if (memberSortField === field) {
+                memberSortOrder *= -1;
+            } else {
+                memberSortField = field;
+                memberSortOrder = 1;
+            }
+            renderMemberTable(document.getElementById('memberSearch').value.toLowerCase());
+        }
 
         async function fetchMembers() {
             try {
@@ -1241,7 +1289,10 @@
             }
         }
 
-        function getActionBadge(action) {
+        function getActionBadge(action, type = 'MEMBER') {
+            if (type === 'DONATION' && (action === 'CREATED' || action === 'UPDATED')) {
+                return '<span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-cyan-500/15 text-cyan-400 border border-cyan-500/20">DONATION</span>';
+            }
             const badges = {
                 'UPDATED':   '<span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-500/15 text-amber-400">UPDATED</span>',
                 'CREATED':   '<span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/15 text-emerald-400">CREATED</span>',
@@ -1255,31 +1306,93 @@
         function renderMemberTable(filter = '') {
             const tbody = document.getElementById('membersBody');
             const countEl = document.getElementById('memberCount');
-            const entries = Object.entries(memberData).map(([id, m]) => ({
-                id, name: m.name, events: m.events || [],
-                lastEvent: (m.events && m.events.length > 0) ? m.events[m.events.length - 1] : null
-            }));
+            const entries = Object.entries(memberData).map(([id, m]) => {
+                // Find associated donations from donationData (linked by pco_id)
+                const memberDonations = Object.values(donationData || {}).filter(d => d.pco_id === id);
+                const donationEvents = memberDonations.flatMap(d => (d.events || []).map(e => ({
+                    ...e,
+                    type: 'DONATION',
+                    detail: e.detail || 'Donation sync'
+                })));
+
+                const allEvents = [...(m.events || []), ...donationEvents];
+                // Sort by date - assuming ISO format strings
+                allEvents.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+                // Name parts extraction
+                const cleanName = m.name.replace(/\(.*\)/, '').trim();
+                const nameParts = cleanName.split(' ');
+                const firstName = nameParts[0] || '';
+                const lastName = nameParts.length > 1 ? nameParts[nameParts.length - 1] : '';
+
+                return {
+                    id, 
+                    name: m.name,
+                    firstName,
+                    lastName,
+                    events: allEvents,
+                    lastEvent: allEvents.length > 0 ? allEvents[allEvents.length - 1] : null
+                };
+            });
 
             const filtered = filter
                 ? entries.filter(e => e.name.toLowerCase().includes(filter) || e.id.includes(filter))
                 : entries;
 
-            filtered.sort((a, b) => a.name.localeCompare(b.name));
-            countEl.textContent = `${filtered.length} member${filtered.length !== 1 ? 's' : ''}`;
+            filtered.sort((a, b) => {
+                let valA, valB;
+                if (memberSortField === 'firstName') {
+                    valA = a.firstName.toLowerCase();
+                    valB = b.firstName.toLowerCase();
+                } else if (memberSortField === 'lastName') {
+                    valA = a.lastName.toLowerCase();
+                    valB = b.lastName.toLowerCase();
+                } else if (memberSortField === 'pcId') {
+                    valA = a.id;
+                    valB = b.id;
+                } else if (memberSortField === 'action') {
+                    valA = (a.lastEvent ? a.lastEvent.action : '').toLowerCase();
+                    valB = (b.lastEvent ? b.lastEvent.action : '').toLowerCase();
+                } else if (memberSortField === 'date') {
+                    valA = a.lastEvent ? new Date(a.lastEvent.date).getTime() : 0;
+                    valB = b.lastEvent ? new Date(b.lastEvent.date).getTime() : 0;
+                }
+                
+                if (valA < valB) return -1 * memberSortOrder;
+                if (valA > valB) return 1 * memberSortOrder;
+                return 0;
+            });
+
+            countEl.innerHTML = `Total: <span class="bg-indigo-500/10 text-indigo-400 px-2 py-0.5 rounded-lg border border-indigo-500/20 font-bold ml-1">${filtered.length}</span> members`;
 
             if (!filtered.length) {
-                tbody.innerHTML = '<tr><td colspan="4" class="text-center py-8 text-slate-500">No members found</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center py-8 text-slate-500">No members found</td></tr>';
                 return;
             }
 
-            tbody.innerHTML = filtered.map(m => `
+            tbody.innerHTML = filtered.map((m, idx) => `
                 <tr class="hover:bg-slate-800/40 cursor-pointer transition-colors" onclick="openMemberModal('${m.id}')">
-                    <td class="px-4 py-2.5 font-medium text-slate-200">${m.name}</td>
+                    <td class="px-4 py-2.5 text-center text-slate-600 font-mono text-[10px]">${idx + 1}</td>
+                    <td class="px-4 py-2.5 font-medium text-slate-200">${m.firstName}</td>
+                    <td class="px-4 py-2.5 font-medium text-slate-400">${m.lastName}</td>
                     <td class="px-4 py-2.5 text-slate-500 font-mono text-xs">${m.id}</td>
-                    <td class="px-4 py-2.5 text-center">${m.lastEvent ? getActionBadge(m.lastEvent.action) : '-'}</td>
-                    <td class="px-4 py-2.5 text-right text-slate-400 text-xs">${m.lastEvent ? formatDate(m.lastEvent.date) : '-'}</td>
+                    <td class="px-4 py-2.5 text-center">${m.lastEvent ? getActionBadge(m.lastEvent.action, m.lastEvent.type) : '-'}</td>
+                    <td class="px-4 py-2.5 text-right text-slate-400 text-xs font-mono">${m.lastEvent ? formatDate(m.lastEvent.date).replace(/^[A-Z][a-z]{2}\s/, '').replace(/:\d{2}\s/, ' ') : '-'}</td>
                 </tr>
             `).join('');
+
+            // Update sort icons
+            document.querySelectorAll('[id^="sort-"]').forEach(icon => {
+                icon.classList.add('opacity-0');
+                icon.classList.remove('opacity-100', 'rotate-180');
+            });
+            const activeIcon = document.getElementById(`sort-${memberSortField}`);
+            if (activeIcon) {
+                activeIcon.classList.remove('opacity-0');
+                activeIcon.classList.add('opacity-100');
+                if (memberSortOrder === -1) activeIcon.classList.add('rotate-180');
+            }
+            lucide.createIcons();
         }
 
         async function openMemberModal(pcId) {
@@ -1400,6 +1513,18 @@
                     text.textContent = statusLabel + 'Idle';
                 }
 
+                // Auto-reset Donation Sync Button if not running
+                const donBtn = document.getElementById('donationSyncBtn');
+                const donText = document.getElementById('donSyncText');
+                const donIcon = document.getElementById('donSyncIcon');
+                if (status.status !== 'Running' && donBtn && donText && donIcon) {
+                    donBtn.disabled = false;
+                    donText.textContent = 'Run Donation Sync';
+                    donIcon.setAttribute('data-lucide', 'play');
+                    donIcon.classList.remove('animate-spin');
+                    lucide.createIcons();
+                }
+
                 // Last sync info
                 document.getElementById('donStartTime').textContent = formatDate(state.start_time);
                 
@@ -1462,6 +1587,7 @@
                 const res = await fetch('/api/donations');
                 donationData = await res.json();
                 renderDonationTable();
+                renderMemberTable(); // Also refresh member table to include new donation actions
             } catch(e) {
                 console.error('Failed to fetch donations:', e);
             }
@@ -1533,14 +1659,19 @@
                     
                     // Auto-expand the new log
                     if (data.log_file) {
-                        setTimeout(() => toggleDonationLog(data.log_file), 500);
+                        // Wait a bit for the list to be populated via the polling
+                        setTimeout(() => {
+                            fetchDonationStatus(); // Force a status refresh
+                            setTimeout(() => toggleDonationLog(data.log_file), 500);
+                        }, 500);
                     }
-
-                    // The main dashboard polling interval (every 3s) will handle 
-                    // updating the status and the open log content.
                 } else {
-                    text.textContent = 'Failed - Retry';
-                    btn.disabled = false;
+                    const errorMsg = data.error || 'Failed';
+                    text.textContent = `Error: ${errorMsg}`;
+                    setTimeout(() => {
+                        btn.disabled = false;
+                        text.textContent = 'Run Donation Sync';
+                    }, 3000);
                 }
             } catch(e) {
                 text.textContent = 'Error - Retry';

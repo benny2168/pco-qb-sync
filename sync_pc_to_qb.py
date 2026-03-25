@@ -219,45 +219,70 @@ class QuickBooksClient:
         }
 
     def get_custom_field_definitions(self):
-        """Fetch custom field definitions from Preferences API."""
+        """Fetch custom field definitions from both Preferences and CustomField APIs."""
         logging.info("QuickBooksClient: Fetching custom field definitions...")
-        url = f"{self.base_url}/v3/company/{self.realm_id}/preferences"
-        # minorversion 70 + include=enhancedAllCustomFields is recommended for Advanced custom fields
-        params = {'minorversion': self.minorversion, 'include': 'enhancedAllCustomFields'}
-        response = requests.get(url, headers=self._get_headers(), params=params)
-        response.raise_for_status()
         
-        data = response.json()
-        logging.debug(f"Raw QB Preferences: {json.dumps(data, indent=2)}")
-        
-        prefs = data.get('Preferences', {})
-        sales_prefs = prefs.get('SalesFormsPrefs', {})
-        custom_fields = sales_prefs.get('CustomField', [])
-        
-        # Flatten nested CustomField structure
-        flat_fields = []
-        for cf in custom_fields:
-            if isinstance(cf.get('CustomField'), list):
-                flat_fields.extend(cf['CustomField'])
-            else:
-                flat_fields.append(cf)
-
-        for cf in flat_fields:
-            name = cf.get('Name')
-            def_id = cf.get('DefinitionId')
-            is_active = cf.get('BooleanValue', True) # Default to True if not specified (Advanced fields)
+        # 1. Fetch from Preferences (Classic Custom Fields)
+        url_prefs = f"{self.base_url}/v3/company/{self.realm_id}/preferences"
+        params = {'minorversion': self.minorversion}
+        try:
+            resp_prefs = requests.get(url_prefs, headers=self._get_headers(), params=params)
+            resp_prefs.raise_for_status()
+            data_prefs = resp_prefs.json()
+            prefs = data_prefs.get('Preferences', {})
+            sales_prefs = prefs.get('SalesFormsPrefs', {})
+            custom_fields = sales_prefs.get('CustomField', [])
             
-            if name:
-                self.discovered_definitions[name] = def_id or name
-                if is_active:
-                    self.active_custom_field_names.add(name)
-                else:
-                    logging.debug(f"QuickBooks: Custom field '{name}' is present but appears INACTIVE in settings.")
+            # Flatten classic structure
+            for cf_wrap in custom_fields:
+                inner_fields = cf_wrap.get('CustomField', [])
+                for cf in inner_fields:
+                    name = cf.get('Name')
+                    # Classic names follow pattern SalesFormsPrefs.UseSalesCustom[1-3]
+                    if name and 'UseSalesCustom' in name:
+                        # Extract the number (1, 2, or 3)
+                        idx_match = re.search(r'UseSalesCustom(\d+)', name)
+                        if idx_match:
+                            idx = idx_match.group(1)
+                            # The DefinitionId for classic fields is usually just the index
+                            self.discovered_definitions[name] = idx
+                            # We don't have the label here yet, but we'll try to match by label later
+                            logging.debug(f"Found Classic Custom Field: {name} (ID: {idx})")
+
+        except Exception as e:
+            logging.warning(f"Failed to fetch classic custom fields from Preferences: {e}")
+
+        # 2. Fetch from CustomField API (Enhanced Custom Fields - QuickBooks Advanced/Standard)
+        # This endpoint is available in minorversion 54+
+        url_cf = f"{self.base_url}/v3/company/{self.realm_id}/customfield"
+        try:
+            resp_cf = requests.get(url_cf, headers=self._get_headers(), params=params)
+            # This endpoint might return 404/400 if not supported or no fields exist
+            if resp_cf.ok:
+                data_cf = resp_cf.json()
+                # The response is usually a list of CustomField objects
+                # Or sometimes wrapped in a QueryResponse
+                cf_list = data_cf.get('CustomField', [])
+                if not cf_list and 'QueryResponse' in data_cf:
+                    cf_list = data_cf['QueryResponse'].get('CustomField', [])
                 
-        # If discovery found nothing but we are on Plus, we can't assume much 
-        # except that the user needs to enable them. 
-        if not self.discovered_definitions:
-            logging.warning("No custom fields discovered via Preferences API. Will use fallback IDs (1, 2, 3).")
+                for cf in cf_list:
+                    name = cf.get('Name')
+                    def_id = cf.get('Id') # Enhanced fields use 'Id'
+                    is_active = cf.get('Active', True)
+                    
+                    if name and is_active:
+                        self.discovered_definitions[name] = def_id
+                        self.active_custom_field_names.add(name)
+                        logging.info(f"Discovered Enhanced Custom Field: '{name}' (ID: {def_id})")
+            else:
+                logging.debug(f"CustomField endpoint not supported or failed (Status {resp_cf.status_code})")
+        except Exception as e:
+            logging.debug(f"Failed to fetch enhanced custom fields: {e}")
+
+        # Summary
+        if self.discovered_definitions:
+            logging.info(f"Total QuickBooks Custom Fields Discovery: {list(self.discovered_definitions.keys())}")
         else:
             logging.info(f"Discovered QB Custom Fields: {self.discovered_definitions}")
 
@@ -363,9 +388,10 @@ class QuickBooksClient:
         return customers
 
     def get_customer(self, customer_id: str) -> Dict[str, Any]:
-        """Fetch a single customer by ID."""
+        """Fetch a single customer by ID with custom fields included."""
         url = f"{self.base_url}/v3/company/{self.realm_id}/customer/{customer_id}"
-        params = {'minorversion': self.minorversion}
+        # include=customfields is sometimes needed for Enhanced Custom Fields to appear
+        params = {'minorversion': self.minorversion, 'include': 'customfields'}
         response = requests.get(url, headers=self._get_headers(), params=params)
         response.raise_for_status()
         return response.json().get('Customer', {})
@@ -753,9 +779,12 @@ class SyncRoutine:
         logging.debug(f"  New (n_custom): {json.dumps(n_custom)}")
         
         for name, nv in n_custom.items():
-            # Only compare/sync custom fields that are actually defined in QuickBooks
+            # CRITICAL: Only compare/sync custom fields that were actually DISCOVERED in QuickBooks.
+            # If a field is not discovered, it means we don't have a valid DefinitionId for it.
+            # Comparing and sending undiscovered fields often results in "silent failures" in QB 
+            # where the value is not persisted, causing an infinite loop of "changes" in our sync.
             if name not in self.qb.active_custom_field_names:
-                logging.debug(f"Skipping comparison for custom field '{name}' as it is not defined in QuickBooks.")
+                logging.debug(f"Skipping comparison for custom field '{name}' as it was not discovered in QuickBooks settings.")
                 continue
 
             ov = o_custom.get(name, "")
@@ -780,17 +809,10 @@ class SyncRoutine:
             configured_custom_fields = set(self.qb.custom_fields_map.values())
             # For validation, we are a bit more permissive: if the field name is found at all (active or not), we'll try to sync it.
             # If it's totally missing from discovery, we'll really warn.
-            missing_in_qb = configured_custom_fields - set(self.qb.discovered_definitions.keys())
+            missing_in_qb = [f for f in configured_custom_fields if f not in self.qb.active_custom_field_names and f != "External ID"] # External ID is often Fax fallback
             
-            # However, for comparison/skipping, we still want to be careful.
-            # I will ensure that names in self.qb.active_custom_field_names also includes the configured labels 
-            # if the user hasn't enabled them yet but wants us to try anyway.
-            for name in configured_custom_fields:
-                if name not in self.qb.active_custom_field_names:
-                    self.qb.active_custom_field_names.add(name)
-
             if missing_in_qb:
-                msg = f"WARNING: The following custom fields were NOT found in your QuickBooks Preferences: {', '.join(missing_in_qb)}. PCO Sync will attempt fallback IDs (1, 2, 3), but these may fail if the fields are not enabled in QuickBooks Settings."
+                msg = f"WARNING: The following configured custom fields were NOT discovered in QuickBooks: {', '.join(missing_in_qb)}. These will be skipped during sync to prevent redundant updates. Please ensure they are enabled for 'Customers' in QuickBooks Settings."
                 logging.warning(msg)
                 self.summary['logs'].append(msg)
 

@@ -206,7 +206,10 @@ def run_scheduled_sync():
     """Callback executed by APScheduler on the cron schedule."""
     logging.info("Scheduled sync triggered by APScheduler cron job.")
     try:
-        config_path = os.path.join(BASE_DIR, 'config.json')
+        # Use standardized config path
+        config_path = os.path.join(BASE_DIR, 'config', 'config.json')
+        if not os.path.exists(config_path):
+            config_path = os.path.join(BASE_DIR, 'config.json')
         config = load_config(config_path)
         setup_logging(config)
         rotate_logs(keep=10)
@@ -248,7 +251,10 @@ def run_scheduled_donation_sync():
     logging.info("Scheduled donation sync triggered.")
     try:
         # Load main config (priority: /app/config/config.json)
-        config = load_config()
+        config_path = os.path.join(BASE_DIR, 'config', 'config.json')
+        if not os.path.exists(config_path):
+            config_path = os.path.join(BASE_DIR, 'config.json')
+        config = load_config(config_path)
         
         # Load donation settings (priority: /app/data/donation_sync_settings.json)
         settings_path = os.path.join(BASE_DIR, 'data', 'donation_sync_settings.json')
@@ -750,7 +756,10 @@ def api_donation_sync_now():
             if (time.time() - mtime) < 3600:
                 return jsonify({"status": "error", "message": "Donation sync already in progress"}), 409
         from sync_donations_qb_to_pc import DonationSyncRoutine
-        config_path = os.path.join(BASE_DIR, 'config.json')
+        # Use standardized config path
+        config_path = os.path.join(BASE_DIR, 'config', 'config.json')
+        if not os.path.exists(config_path):
+            config_path = os.path.join(BASE_DIR, 'config.json')
         config = load_config(config_path)
         log_file = setup_logging(config, prefix="donations_sync")
         rotate_logs(keep=10)
