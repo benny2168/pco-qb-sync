@@ -238,13 +238,14 @@ def run_scheduled_donation_sync():
     """Callback for scheduled donation sync."""
     logging.info("Scheduled donation sync triggered.")
     try:
-        # Load main config
-        config_path = os.path.join(BASE_DIR, 'config.json')
-        with open(config_path, 'r') as f:
-            config = json.load(f)
+        # Load main config (priority: /app/config/config.json)
+        config = load_config()
         
-        # Load donation settings (for mapping, frequency, etc.)
-        settings_path = os.path.join(BASE_DIR, 'donation_sync_settings.json')
+        # Load donation settings (priority: /app/data/donation_sync_settings.json)
+        settings_path = os.path.join(BASE_DIR, 'data', 'donation_sync_settings.json')
+        if not os.path.exists(settings_path):
+             settings_path = os.path.join(BASE_DIR, 'donation_sync_settings.json')
+             
         donation_settings = {}
         if os.path.exists(settings_path):
             with open(settings_path, 'r') as f:
@@ -253,8 +254,8 @@ def run_scheduled_donation_sync():
         log_file = setup_logging(config, prefix="donations_sync")
         rotate_logs(keep=10)
         
-        # Save initial status
-        status_path = os.path.join(BASE_DIR, 'latest_donation_sync_status.json')
+        # Save initial status in data/
+        status_path = os.path.join(BASE_DIR, 'data', 'latest_donation_sync_status.json')
         with open(status_path, 'w') as f:
             json.dump({"status": "Running", "log_file": os.path.basename(log_file)}, f)
 
@@ -281,8 +282,11 @@ def load_config(config_path=None):
         return {}
 
 def reschedule_donation_sync():
-    """Update the donation sync job based on donation_sync_settings.json."""
-    settings_path = os.path.join(BASE_DIR, 'donation_sync_settings.json')
+    """Update the donation sync job based on donation_sync_settings.json (priority: data/)."""
+    settings_path = os.path.join(BASE_DIR, 'data', 'donation_sync_settings.json')
+    if not os.path.exists(settings_path):
+        settings_path = os.path.join(BASE_DIR, 'donation_sync_settings.json')
+        
     if not os.path.exists(settings_path):
         return
 
@@ -744,8 +748,12 @@ def api_member_history(pc_id):
 def api_donation_sync_now():
     """Trigger a manual donation reverse sync (QB → PCO Giving)."""
     try:
-        # Check for lock file before starting
-        lock_path = os.path.join(BASE_DIR, "donation_sync.lock")
+        # Check for lock file in data/ before starting
+        lock_path = os.path.join(BASE_DIR, "data", "donation_sync.lock")
+        if not os.path.exists(lock_path):
+             # Fallback
+             lock_path = os.path.join(BASE_DIR, "donation_sync.lock")
+             
         if os.path.exists(lock_path):
             mtime = os.path.getmtime(lock_path)
             if (time.time() - mtime) < 3600:

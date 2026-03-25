@@ -31,7 +31,8 @@ def load_config(config_path: Optional[str] = None) -> Dict[str, Any]:
         return json.load(f)
 
 # Logs helper
-LOG_DIR = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'logs')
+BASE_DIR = os.path.dirname(os.path.realpath(__file__))
+LOG_DIR = os.path.join(BASE_DIR, 'logs')
 os.makedirs(LOG_DIR, exist_ok=True)
 
 def setup_logging(config: Dict[str, Any], prefix: str = "sync"):
@@ -407,7 +408,7 @@ class SyncRoutine:
             'logs': []
         }
         
-        # Member sync history tracker
+        # Member sync history tracker in data/
         self.history_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'data', 'member_sync_history.json')
         self.member_history = self._load_member_history()
 
@@ -467,7 +468,7 @@ class SyncRoutine:
         self.member_history[pc_id]['events'] = self.member_history[pc_id]['events'][-100:]
 
     def _save_summary_json(self, retries=5, delay=0.1):
-        """Save the latest summary to a local JSON file using atomic rename with retries."""
+        """Save the latest summary to data/latest_sync_status.json using atomic rename with retries."""
         status_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'data', 'latest_sync_status.json')
         temp_path = status_path + ".tmp"
         

@@ -523,7 +523,11 @@ class DonationSyncRoutine:
     # -- Main sync ---------------------------------------------------------
     def run(self):
         """Execute the donation reverse sync."""
-        lock_path = os.path.join(self.base_dir, "donation_sync.lock")
+        lock_path = os.path.join(self.base_dir, "data", "donation_sync.lock")
+        if not os.path.exists(lock_path):
+             # Fallback
+             lock_path = os.path.join(self.base_dir, "donation_sync.lock")
+             
         if os.path.exists(lock_path):
             # Check if lock is old (e.g. > 1 hour)
             mtime = os.path.getmtime(lock_path)
