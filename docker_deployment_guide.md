@@ -96,10 +96,20 @@ You can also enter the variables directly in the Portainer **Environment variabl
 
 ## Troubleshooting
 
-### "failed to read dockerfile: no such file or directory"
-This error occurs in Portainer when using the **Web Editor** (copy-pasting the compose file) while using the `build: .` directive.
-*   **Why?**: The Web Editor does not have access to the `Dockerfile` or source code on your NAS.
-*   **Solution**: Use the **Repository** deployment method described above. This allows Portainer to pull the `Dockerfile` and source code directly from GitHub into a temporary build context on the NAS.
+### "Bind mount failed: ... does not exist"
+This means Docker cannot find the folder on your Synology NAS. 
+1.  **Verify the Absolute Path**: 
+    *   Open **File Station**.
+    *   Right-click the `pco-qb-sync` folder.
+    *   Select **Properties**.
+    *   Copy the **Location** field (e.g., `/volume1/docker/pco-qb-sync`). 
+    *   If yours says `/volume2/...` or something different, you **must** update the `docker-compose.yml` to match.
+2.  **Manual Creation**: Ensure you have actually created the `config`, `data`, and `logs` subfolders inside `pco-qb-sync`.
+3.  **Permissions**: Ensure the `docker` user group has Read/Write permissions to these folders.
+
+### "failed to read dockerfile" or "config.json not found"
+1.  **Use Repository Method**: Always use the **Repository** deployment method described at the top of this guide.
+2.  **Clean Build**: I have updated the `Dockerfile` to no longer require `config.json` at build time. It is now loaded from your volume mount at runtime. Pull the latest from the `main` branch.
 
 ### Accessing the Dashboard
 1. The dashboard will be accessible at `http://<your-server-ip>:8337`.
