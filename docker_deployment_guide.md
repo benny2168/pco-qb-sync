@@ -1,15 +1,26 @@
-# Docker Deployment & Portainer Guide
+## Deployment via Portainer (GitHub Repository)
 
-This guide provides the necessary configuration to deploy the **PCO to QuickBooks Sync** application using Docker and Portainer.
+For Synology deployments, it is recommended to use the **Repository** method in Portainer to avoid build context errors (e.g., "failed to read dockerfile").
 
-## Docker Compose Configuration
+### 1. Create a New Stack
+1. In Portainer, go to **Stacks** > **Add stack**.
+2. Select **Repository** as the build method.
+3. **Repository URL**: `https://github.com/benny2168/pco-qb-sync.git`
+4. **Repository reference**: `refs/heads/update-portainer` (or `main` once merged).
+5. **Compose path**: `docker-compose.yml`
 
-The following `docker-compose.yml` is optimized for production. It uses port **8337** and mounts only the necessary persistent data volumes.
+### 2. Docker Compose Configuration
+Ensure your `docker-compose.yml` uses the following structure. 
+
+> [!IMPORTANT]
+> When using the **Repository** method, the `build: .` directive works correctly because Portainer clones the entire repository onto the NAS.
 
 ```yaml
 version: "3.8"
+
+services:
   pco-qb-sync:
-    image: pco-qb-sync:latest # Ensure you build the image first or point to your registry
+    build: .
     container_name: pco-qb-sync
     restart: unless-stopped
     ports:
@@ -68,6 +79,13 @@ When deploying via Portainer, enter the following keys in the **Environment vari
 | `AZURE_SCOPE` | Entra ID Scopes (`User.Read GroupMember.Read.All`) |
 | `FLASK_SECRET_KEY` | Random string for session security |
 
-## Post-Deployment
+## Troubleshooting
+
+### "failed to read dockerfile: no such file or directory"
+This error occurs in Portainer when using the **Web Editor** (copy-pasting the compose file) while using the `build: .` directive.
+*   **Why?**: The Web Editor does not have access to the `Dockerfile` or source code on your NAS.
+*   **Solution**: Use the **Repository** deployment method described above. This allows Portainer to pull the `Dockerfile` and source code directly from GitHub into a temporary build context on the NAS.
+
+### Accessing the Dashboard
 1. The dashboard will be accessible at `http://<your-server-ip>:8337`.
 2. Ensure you update your **QuickBooks App Redirect URI** and **Entra ID Redirect URI** to match the new port/URL if necessary.
