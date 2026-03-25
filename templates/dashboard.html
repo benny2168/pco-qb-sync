@@ -467,6 +467,9 @@
                                 class="bg-slate-900/50 border border-slate-700/50 rounded-lg pl-9 pr-3 py-1.5 text-xs text-slate-300 focus:outline-none focus:border-indigo-500 transition-colors w-48"
                                 oninput="renderDonationTable(this.value.toLowerCase())">
                         </div>
+                        <button onclick="confirmClearHistory('donation')" class="text-[10px] uppercase tracking-wider font-bold px-3 py-1.5 rounded-lg bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 transition-all border border-amber-500/20 flex items-center gap-2">
+                            <i data-lucide="history" class="w-3.5 h-3.5"></i> Clear History
+                        </button>
                     </div>
                 </div>
                 <div class="overflow-x-auto min-h-[300px]">
@@ -496,9 +499,6 @@
                     <div class="flex items-center gap-2">
                         <button onclick="clearLogs('donation')" class="text-[10px] uppercase tracking-wider font-bold px-3 py-1.5 rounded-lg bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 transition-all border border-rose-500/20 flex items-center gap-2">
                             <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Clear Logs
-                        </button>
-                        <button onclick="confirmClearHistory('donation')" class="text-[10px] uppercase tracking-wider font-bold px-3 py-1.5 rounded-lg bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 transition-all border border-amber-500/20 flex items-center gap-2">
-                            <i data-lucide="history" class="w-3.5 h-3.5"></i> Clear History
                         </button>
                     </div>
                 </div>
