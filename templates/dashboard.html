@@ -594,10 +594,7 @@
                 const year = match[1], month = parseInt(match[2]) - 1, day = match[3];
                 const hour = match[4], min = match[5], sec = match[6];
                 const d = new Date(year, month, day, hour, min, sec);
-                return `${prefix} — ` + d.toLocaleString(undefined, { 
-                    weekday: 'short', month: 'short', day: 'numeric', year: 'numeric',
-                    hour: 'numeric', minute:'2-digit', second:'2-digit' 
-                });
+                return `${prefix} — ` + formatDate(d.toISOString());
             }
             return logFilename;
         };
@@ -605,9 +602,16 @@
         const formatDate = (isoStr) => {
             if (!isoStr) return '--';
             const d = new Date(isoStr);
-            return d.toLocaleString(undefined, { 
-                month: 'short', day: 'numeric', 
-                hour: '2-digit', minute:'2-digit', second:'2-digit' 
+            if (isNaN(d.getTime())) return isoStr; 
+            // Standardizing to: Mon Mar 24, 9:28:30 PM
+            return d.toLocaleString('en-US', { 
+                weekday: 'short', 
+                month: 'short', 
+                day: 'numeric', 
+                hour: 'numeric', 
+                minute: '2-digit', 
+                second: '2-digit',
+                hour12: true 
             });
         };
 
@@ -910,13 +914,13 @@
                 }
                 
                 if (data.next_run) {
-                    document.getElementById('nextSyncTime').innerText = data.next_run;
+                    document.getElementById('nextSyncTime').innerText = formatDate(data.next_run);
                 } else {
                     document.getElementById('nextSyncTime').innerText = '--';
                 }
                 
                 if (data.next_run) {
-                    document.getElementById('nextSyncTime').innerText = data.next_run;
+                    document.getElementById('nextSyncTime').innerText = formatDate(data.next_run);
                 } else {
                     document.getElementById('nextSyncTime').innerText = '--';
                 }
@@ -1431,8 +1435,7 @@
                 }
 
                 // Last sync info
-                document.getElementById('donStartTime').textContent = state.start_time
-                    ? new Date(state.start_time).toLocaleString() : '--';
+                document.getElementById('donStartTime').textContent = formatDate(state.start_time);
                 
                 if (state.duration_seconds !== undefined && state.duration_seconds !== null) {
                     const mins = Math.floor(state.duration_seconds / 60);
@@ -1445,7 +1448,7 @@
                 }
 
                 if (data.next_run) {
-                    document.getElementById('donNextSync').innerText = data.next_run;
+                    document.getElementById('donNextSync').innerText = formatDate(data.next_run);
                 } else {
                     document.getElementById('donNextSync').innerText = '--';
                 }
@@ -1607,7 +1610,7 @@
                 parseDonCronToUI(donationSettings.sync_frequency || 'manual');
 
                 if (donationSettings.next_run) {
-                    document.getElementById('donNextSync').innerText = donationSettings.next_run;
+                    document.getElementById('donNextSync').innerText = formatDate(donationSettings.next_run);
                 } else {
                     document.getElementById('donNextSync').innerText = '--';
                 }
