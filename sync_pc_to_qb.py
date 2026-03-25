@@ -1,13 +1,15 @@
 import os
 import json
 import logging
+import time
 import requests
 import smtplib
 import glob
+import re
 from email.mime.text import MIMEText
 from datetime import datetime
 from typing import List, Dict, Any, Optional
-from dotenv import load_dotenv, set_key
+from dotenv import load_dotenv
 
 # Load environment variables from .env file
 load_dotenv()
@@ -23,12 +25,12 @@ def load_config(config_path: str = 'config.json') -> Dict[str, Any]:
 LOG_DIR = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'logs')
 os.makedirs(LOG_DIR, exist_ok=True)
 
-def setup_logging(config: Dict[str, Any]):
+def setup_logging(config: Dict[str, Any], prefix: str = "sync"):
     log_cfg = config.get('logging', {})
     
     # Generate timestamped filename inside logs/ directory
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    log_file = os.path.join(LOG_DIR, f"sync_{timestamp}.log")
+    log_file = os.path.join(LOG_DIR, f"{prefix}_{timestamp}.log")
     
     logging.basicConfig(
         level=getattr(logging, log_cfg.get('level', 'INFO')),
@@ -43,9 +45,11 @@ def setup_logging(config: Dict[str, Any]):
     logging.getLogger('').addHandler(console)
     return log_file
 
-def rotate_logs(keep: int = 10):
-    """Keep only the 'keep' most recent sync log files."""
-    log_files = sorted(glob.glob(os.path.join(LOG_DIR, "sync_*.log")), key=os.path.getmtime, reverse=True)
+def rotate_logs(keep: int = 10, prefix: str = "sync"):
+    """Keep only the 'keep' most recent sync log files with a given prefix."""
+    # Ensure prefix ends with _ to avoid partial matches
+    pattern = f"{prefix}_*.log"
+    log_files = sorted(glob.glob(os.path.join(LOG_DIR, pattern)), key=os.path.getmtime, reverse=True)
     if len(log_files) > keep:
         logs_to_delete = log_files[keep:]
         for log_file in logs_to_delete:
@@ -113,7 +117,7 @@ class PlanningCenterClient:
     def get_person_details(self, person_id: str) -> Dict[str, Any]:
         """Fetch detailed person object including address, emails, and custom field data."""
         url = f"{self.base_url}/people/v2/people/{person_id}"
-        params = {'include': 'emails,addresses,phone_numbers,field_data'}
+        params = {'include': 'emails,addresses,phone_numbers,field_data,name_prefix,name_suffix'}
         response = requests.get(url, auth=self.auth, params=params)
         response.raise_for_status()
         return response.json()
@@ -133,6 +137,13 @@ class QuickBooksClient:
         self.custom_fields_map = config['custom_fields']
         self.minorversion = 70
         self.discovered_definitions = {} # Name -> DefinitionId
+        self.active_custom_field_names = set() 
+        # Fallback for QBO Plus / Sandbox if discovery fails
+        self.custom_fields_fallback = {
+            config['custom_fields'].get('pc_id', 'External ID'): '1',
+            config['custom_fields'].get('nickname', 'Nickname'): '2',
+            config['custom_fields'].get('prayer_group', 'PrayerGroup'): '3'
+        }
 
     def _refresh_access_token(self):
         """Refresh OAuth 2.0 token."""
@@ -157,8 +168,23 @@ class QuickBooksClient:
             # Save the new refresh token back to .env
             env_path = os.path.join(os.path.dirname(__file__), '.env')
             if os.path.exists(env_path):
-                set_key(env_path, 'QB_REFRESH_TOKEN', self.refresh_token)
-                logging.info("New QB refresh token automatically saved to .env")
+                try:
+                    # Manual update to avoid atomic rename (which fails in Docker single-file volumes)
+                    with open(env_path, 'r') as f:
+                        lines = f.readlines()
+                    with open(env_path, 'w') as f:
+                        found = False
+                        for line in lines:
+                            if line.startswith('QB_REFRESH_TOKEN='):
+                                f.write(f"QB_REFRESH_TOKEN='{self.refresh_token}'\n")
+                                found = True
+                            else:
+                                f.write(line)
+                        if not found:
+                            f.write(f"QB_REFRESH_TOKEN='{self.refresh_token}'\n")
+                    logging.info("New QB refresh token automatically saved to .env")
+                except Exception as e:
+                    logging.error(f"Failed to auto-save refresh token: {e}")
             else:
                 logging.warning(".env file not found. Could not save the new refresh token!")
 
@@ -173,6 +199,7 @@ class QuickBooksClient:
 
     def get_custom_field_definitions(self):
         """Fetch custom field definitions from Preferences API."""
+        logging.info("QuickBooksClient: Fetching custom field definitions...")
         url = f"{self.base_url}/v3/company/{self.realm_id}/preferences"
         # minorversion 70 + include=enhancedAllCustomFields is recommended for Advanced custom fields
         params = {'minorversion': self.minorversion, 'include': 'enhancedAllCustomFields'}
@@ -202,10 +229,89 @@ class QuickBooksClient:
             # However, if not fully enabled, it might show 'SalesFormsPrefs.UseSalesCustom1' etc.
             if name and def_id:
                 self.discovered_definitions[name] = def_id
+                self.active_custom_field_names.add(name)
                 
         # If discovery found nothing but we are on Plus, we can't assume much 
         # except that the user needs to enable them. 
-        logging.info(f"Discovered QB Custom Fields: {self.discovered_definitions}")
+        if not self.discovered_definitions:
+            logging.warning("No custom fields discovered via Preferences API. Will use fallback IDs (1, 2, 3).")
+        else:
+            logging.info(f"Discovered QB Custom Fields: {self.discovered_definitions}")
+
+    def get_all_accounts(self) -> List[Dict[str, str]]:
+        """Fetch all active income and asset accounts from QB."""
+        accounts = []
+        start_position = 1
+        max_results = 100
+        
+        while True:
+            # Query for Income, Other Current Asset (typically used for restricted funds)
+            query = (
+                f"SELECT Id, Name, AccountType FROM Account "
+                f"WHERE Active = true AND AccountType IN ('Income', 'Other Current Asset') "
+                f"STARTPOSITION {start_position} MAXRESULTS {max_results}"
+            )
+            url = f"{self.base_url}/v3/company/{self.realm_id}/query"
+            params = {"query": query, "minorversion": self.minorversion}
+            
+            response = requests.get(url, headers=self._get_headers(), params=params)
+            if response.status_code == 401:
+                self._refresh_access_token()
+                response = requests.get(url, headers=self._get_headers(), params=params)
+            
+            response.raise_for_status()
+            data = response.json().get('QueryResponse', {})
+            batch = data.get('Account', [])
+            for acc in batch:
+                accounts.append({
+                    "id": acc["Id"],
+                    "name": acc["Name"],
+                    "type": acc["AccountType"]
+                })
+            
+            if len(batch) < max_results:
+                break
+            start_position += max_results
+            
+        logging.info(f"Loaded {len(accounts)} active accounts from QB.")
+        return accounts
+
+    def get_all_items(self) -> List[Dict[str, str]]:
+        """Fetch all active products/services (Items) from QB."""
+        items = []
+        start_position = 1
+        max_results = 100
+        
+        while True:
+            query = (
+                f"SELECT Id, Name, Type FROM Item "
+                f"WHERE Active = true "
+                f"STARTPOSITION {start_position} MAXRESULTS {max_results}"
+            )
+            url = f"{self.base_url}/v3/company/{self.realm_id}/query"
+            params = {"query": query, "minorversion": self.minorversion}
+            
+            response = requests.get(url, headers=self._get_headers(), params=params)
+            if response.status_code == 401:
+                self._refresh_access_token()
+                response = requests.get(url, headers=self._get_headers(), params=params)
+            
+            response.raise_for_status()
+            data = response.json().get('QueryResponse', {})
+            batch = data.get('Item', [])
+            for itm in batch:
+                items.append({
+                    "id": itm["Id"],
+                    "name": itm["Name"],
+                    "type": itm.get("Type", "Unknown")
+                })
+                
+            if len(batch) < max_results:
+                break
+            start_position += max_results
+            
+        logging.info(f"Loaded {len(items)} active items from QB.")
+        return items
 
     def get_all_customers(self) -> List[Dict[str, Any]]:
         """Fetch all customers from QB to build a local lookup map."""
@@ -214,6 +320,8 @@ class QuickBooksClient:
         max_results = 100
         
         while True:
+            # Note: CustomField is supposed to be returned by SELECT * but some sandbox/minorversions 
+            # might be finicky. Being explicit helps in some cases.
             query = f"SELECT * FROM Customer STARTPOSITION {start_position} MAXRESULTS {max_results}"
             url = f"{self.base_url}/v3/company/{self.realm_id}/query"
             logging.debug(f"Fetching QB Customers: {query}")
@@ -256,11 +364,18 @@ class QuickBooksClient:
         payload['Id'] = customer_id
         payload['SyncToken'] = sync_token
         payload['sparse'] = True
+        
+        logging.debug(f"QB Update Payload for {customer_id}: {json.dumps(payload, indent=2)}")
         response = requests.post(url, headers=self._get_headers(), json=payload, params=params)
+        
         if not response.ok:
+            logging.error(f"QB Update failed for {customer_id}: {response.status_code} - {response.text}")
             # We raise here, the caller handles Stale Object (5010) specifically
             response.raise_for_status()
-        return response.json().get('Customer', {})
+            
+        result = response.json().get('Customer', {})
+        logging.debug(f"QB Update Response for {customer_id}: DisplayName='{result.get('DisplayName')}', SyncToken='{result.get('SyncToken')}'")
+        return result
 
 class SyncRoutine:
     def __init__(self, config: Dict[str, Any]):
@@ -284,7 +399,7 @@ class SyncRoutine:
         }
         
         # Member sync history tracker
-        self.history_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'sync_history.json')
+        self.history_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'data', 'member_sync_history.json')
         self.member_history = self._load_member_history()
 
     def _load_member_history(self) -> Dict[str, Any]:
@@ -294,38 +409,77 @@ class SyncRoutine:
                 with open(self.history_path, 'r', encoding='utf-8') as f:
                     return json.load(f)
             except Exception as e:
-                logging.warning(f"Could not load sync_history.json: {e}")
+                logging.warning(f"Could not load member_sync_history.json: {e}")
         return {}
 
-    def _save_member_history(self):
-        """Persist member history to disk."""
-        try:
-            with open(self.history_path, 'w', encoding='utf-8') as f:
-                json.dump(self.member_history, f, indent=2)
-        except Exception as e:
-            logging.error(f"Failed to save sync_history.json: {e}")
+    def _save_member_history(self, retries=5, delay=0.1):
+        """Persist member history to disk using atomic rename with retries."""
+        for i in range(retries):
+            try:
+                temp_path = self.history_path + ".tmp"
+                with open(temp_path, 'w', encoding='utf-8') as f:
+                    json.dump(self.member_history, f, indent=2)
+                    f.flush()
+                    os.fsync(f.fileno())
+                os.replace(temp_path, self.history_path)
+                return True
+            except OSError as e:
+                if e.errno == 35: # Resource deadlock avoided
+                    if i < retries - 1:
+                        time.sleep(delay)
+                        continue
+                logging.error(f"Failed to save member_sync_history.json (attempt {i+1}): {e}")
+                if i == retries - 1: raise
+            except Exception as e:
+                logging.error(f"Unexpected error saving member history: {e}")
+                break
+        return False
 
-    def _record_member_event(self, pc_id: str, name: str, action: str, detail: str = ""):
+    def _record_member_event(self, pc_id: str, name: str, action: str, detail: str = "", changes: Optional[List[Dict[str, Any]]] = None, display_name: Optional[str] = None):
         """Append an event to a member's sync history."""
         if pc_id not in self.member_history:
             self.member_history[pc_id] = {'name': name, 'events': []}
         # Always update name to latest
         self.member_history[pc_id]['name'] = name
-        self.member_history[pc_id]['events'].append({
+        
+        event = {
             'date': datetime.now().isoformat(),
             'action': action,
             'detail': detail
-        })
+        }
+        if display_name:
+            event['display_name'] = display_name
+            
+        if changes:
+            event['changes'] = changes
+            
+        self.member_history[pc_id]['events'].append(event)
         # Keep last 100 events per member to prevent unbounded growth
         self.member_history[pc_id]['events'] = self.member_history[pc_id]['events'][-100:]
 
-    def _save_summary_json(self):
-        """Save the latest summary to a local JSON file."""
-        try:
-            with open("latest_sync_status.json", "w") as f:
-                json.dump(self.summary, f, indent=4)
-        except Exception as e:
-            logging.error(f"Failed to save status JSON: {e}")
+    def _save_summary_json(self, retries=5, delay=0.1):
+        """Save the latest summary to a local JSON file using atomic rename with retries."""
+        status_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'data', 'latest_sync_status.json')
+        temp_path = status_path + ".tmp"
+        
+        for i in range(retries):
+            try:
+                with open(temp_path, "w", encoding="utf-8") as f:
+                    json.dump({"status": self.summary["status"], "last_summary": self.summary}, f, indent=2)
+                    f.flush()
+                    os.fsync(f.fileno())
+                os.replace(temp_path, status_path)
+                return True
+            except OSError as e:
+                if e.errno == 35: # Resource deadlock avoided
+                    if i < retries - 1:
+                        time.sleep(delay)
+                        continue
+                logging.error(f"Failed to save status JSON (attempt {i+1}): {e}")
+            except Exception as e:
+                logging.error(f"Unexpected error saving status JSON: {e}")
+                break
+        return False
 
     def _log_record(self, action: str, person_name: str, detail: str = ""):
         msg = f"{action}: {person_name} - {detail}"
@@ -359,12 +513,81 @@ class SyncRoutine:
         addresses = [item['attributes'] for item in included if item['type'] == 'Address' and item['attributes'].get('primary')]
         addr = addresses[0] if addresses else {}
 
+        # Extract Title (name_prefix) and Suffix (name_suffix) from included relationships
+        name_prefix = next((item['attributes']['value'] for item in included if item['type'] == 'NamePrefix'), None)
+        name_suffix = next((item['attributes']['value'] for item in included if item['type'] == 'NameSuffix'), None)
+        nickname = attrs.get('nickname')
+        
+        # Calculate dynamic display name
+        display_fmt = self.config.get('planning_center', {}).get('display_name_format', '{first_name} {last_name}')
+        
+        # Mapping for display name calculation
+        # Extract Prayer Group first (re-using logic from later in function for consistency)
+        pco_pg_id = self.pc.field_definitions.get('prayer group')
+        prayer_group_val = ""
+        if pco_pg_id:
+            for fd in [item for item in included if item.get('type') == 'FieldDatum']:
+                if fd.get('relationships', {}).get('field_definition', {}).get('data', {}).get('id') == pco_pg_id:
+                    prayer_group_val = fd.get('attributes', {}).get('value') or ""
+                    break
+
+        format_map = {
+            'first_name': attrs.get('first_name') or "",
+            'middle_name': attrs.get('middle_name') or "",
+            'last_name': attrs.get('last_name') or "",
+            'nickname': nickname or "",
+            'prayer_group': prayer_group_val or "",
+            'title': name_prefix or "",
+            'suffix': name_suffix or ""
+        }
+        
+        display_name = display_fmt
+        
+        # 1. Handle optional blocks [...]
+        # Find all content inside square brackets
+        optional_blocks = re.findall(r'\[([^\]]+)\]', display_name)
+        for block_content in optional_blocks:
+            full_block = f"[{block_content}]"
+            # Extract all {tags} within this block
+            tags_in_block = re.findall(r'\{([^\}]+)\}', block_content)
+            
+            # Check if ANY of the tags in this block have a non-empty value
+            has_value = False
+            for tag in tags_in_block:
+                if format_map.get(tag):
+                    has_value = True
+                    break
+            
+            if has_value:
+                # Keep the block content (minus the brackets) and replace tags
+                processed_block = block_content
+                for tag in tags_in_block:
+                    val = format_map.get(tag, "")
+                    processed_block = processed_block.replace(f"{{{tag}}}", val)
+                display_name = display_name.replace(full_block, processed_block)
+            else:
+                # Remove the entire block
+                display_name = display_name.replace(full_block, "")
+
+        # 2. Handle remaining standard tags outside of brackets
+        for key, val in format_map.items():
+            display_name = display_name.replace(f"{{{key}}}", val)
+            
+        # Clean up extra spaces
+        display_name = re.sub(r'\s+', ' ', display_name).strip()
+        
+        logging.debug(f"PCO Name Components: Prefix={name_prefix}, First={attrs.get('first_name')}, Middle={attrs.get('middle_name')}, Last={attrs.get('last_name')}, Nickname={nickname}, Suffix={name_suffix}, PrayerGroup={prayer_group_val}")
+        logging.info(f"Calculated DisplayName for {attrs.get('first_name')} {attrs.get('last_name')}: '{display_name}' (Format: '{display_fmt}')")
+        
         # Construct QB payload
         qb_data = {
-            "GivenName": attrs.get('first_name'),
-            "MiddleName": attrs.get('middle_name')[:30] if attrs.get('middle_name') else None,
-            "FamilyName": attrs.get('last_name'),
-            "DisplayName": attrs.get('name'),
+            "Title": name_prefix if name_prefix else "",
+            "GivenName": attrs.get('first_name') or "",
+            "MiddleName": (attrs.get('middle_name') or "")[:30],
+            "FamilyName": attrs.get('last_name') or "",
+            "Suffix": (nickname or "")[:10], # User requested nickname in Suffix
+            "DisplayName": display_name[:500],
+            "PrintOnCheckName": display_name[:110], # QB has 110 char limit for this
             "PrimaryEmailAddr": {"Address": primary_email if primary_email else None},
             "PrimaryPhone": {"FreeFormNumber": primary_phone if primary_phone else None},
             "Fax": {"FreeFormNumber": person_data['id']},  # Store PC ID in Fax field
@@ -375,9 +598,34 @@ class SyncRoutine:
                 "CountrySubDivisionCode": addr.get('state'),
                 "PostalCode": addr.get('zip')
             },
-            # Custom fields are now optional/best-effort
             "CustomField": []
         }
+
+        # Nickname
+        nickname = attrs.get('nickname')
+        if nickname:
+            field_name = self.qb.custom_fields_map.get('nickname', 'Nickname')
+            cf_entry = {
+                "Name": field_name,
+                "Type": "StringType",
+                "StringValue": nickname
+            }
+            def_id = self.qb.discovered_definitions.get(field_name) or self.qb.custom_fields_fallback.get(field_name)
+            if def_id:
+                cf_entry["DefinitionId"] = def_id
+            qb_data["CustomField"].append(cf_entry)
+
+        # ID Number (Custom Field)
+        field_name_id = self.qb.custom_fields_map.get('pc_id', 'ID number')
+        cf_id_entry = {
+            "Name": field_name_id,
+            "Type": "StringType",
+            "StringValue": str(person_data['id'])
+        }
+        def_id = self.qb.discovered_definitions.get(field_name_id) or self.qb.custom_fields_fallback.get(field_name_id)
+        if def_id:
+            cf_id_entry["DefinitionId"] = def_id
+        qb_data["CustomField"].append(cf_id_entry)
 
         # Extract Prayer Group from PCO field data
         pco_prayer_group_id = self.pc.field_definitions.get('prayer group')
@@ -392,32 +640,97 @@ class SyncRoutine:
                     break
                     
         if prayer_group_val:
-            # Map Prayer Group to QuickBooks CompanyName field (max length 50)
+            field_name_pg = self.qb.custom_fields_map.get('prayer_group', 'PrayerGroup')
+            cf_pg_entry = {
+                "Name": field_name_pg,
+                "Type": "StringType",
+                "StringValue": str(prayer_group_val)[:50]
+            }
+            def_id = self.qb.discovered_definitions.get(field_name_pg) or self.qb.custom_fields_fallback.get(field_name_pg)
+            if def_id:
+                cf_pg_entry["DefinitionId"] = def_id
+            qb_data["CustomField"].append(cf_pg_entry)
+            # Also keep CompanyName for backward compatibility if needed, but the custom field is preferred now
             qb_data['CompanyName'] = str(prayer_group_val)[:50]
 
         return qb_data
 
     def _has_customer_changed(self, existing_qb, qb_payload):
-        for field in ['GivenName', 'MiddleName', 'FamilyName', 'DisplayName', 'CompanyName']:
-            if (qb_payload.get(field) or "") != (existing_qb.get(field) or ""):
-                return True, f"{field} changed"
-                
-        n_email = qb_payload.get('PrimaryEmailAddr', {}).get('Address') if qb_payload.get('PrimaryEmailAddr') else ""
-        o_email = existing_qb.get('PrimaryEmailAddr', {}).get('Address') if existing_qb.get('PrimaryEmailAddr') else ""
-        if n_email != o_email: return True, "Email changed"
+        """
+        Compare existing QB customer with payload and return a list of changes.
+        Each change is a dict: {"field": str, "old": str, "new": str}
+        """
+        changes = []
+        
+        # Combine all fields to check for changes
+        fields_to_check = [
+            ("Title", "Title", "prefix"),
+            ("GivenName", "GivenName", "first_name"),
+            ("MiddleName", "MiddleName", "middle_name"),
+            ("FamilyName", "FamilyName", "last_name"),
+            ("Suffix", "Suffix", "suffix"),
+            ("CompanyName", "CompanyName", "company_name"),
+            ("DisplayName", "DisplayName", "display_name"),
+            ("PrimaryEmailAddr", "Email", "email"),
+            ("PrimaryPhone", "Phone", "phone"),
+            ("BillAddr", "Address", "address")
+        ]
+        
+        # Special check for Email, Phone, Address as they are nested
+        for qb_key, display_name, internal_key in fields_to_check:
+            qb_val = existing_qb.get(qb_key)
+            new_val = qb_payload.get(qb_key)
+            
+            # Normalize for comparison
+            if qb_key == "PrimaryEmailAddr":
+                qb_val = qb_val.get('Address') if qb_val else ""
+                new_val = new_val.get('Address') if new_val else ""
+            elif qb_key == "PrimaryPhone":
+                qb_val = qb_val.get('FreeFormNumber') if qb_val else ""
+                new_val = new_val.get('FreeFormNumber') if new_val else ""
+            elif qb_key == "BillAddr":
+                # Compare critical address fields
+                qb_val = f"{qb_val.get('Line1','')}, {qb_val.get('City','')}, {qb_val.get('CountrySubDivisionCode','')}, {qb_val.get('PostalCode','')}" if qb_val else ""
+                new_val = f"{new_val.get('Line1','')}, {new_val.get('City','')}, {new_val.get('CountrySubDivisionCode','')}, {new_val.get('PostalCode','')}" if new_val else ""
+            
+            qb_val_str = str(qb_val or "").strip()
+            new_val_str = str(new_val or "").strip()
+            
+            if qb_val_str != new_val_str:
+                logging.info(f"Field {display_name} changed: '{qb_val_str}' -> '{new_val_str}'")
+                changes.append({
+                    "field": display_name,
+                    "old": qb_val_str,
+                    "new": new_val_str
+                })
+            else:
+                logging.debug(f"Field {display_name} identical: '{qb_val_str}'")
+        
+        # Custom Fields (specifically Nickname, External ID, PrayerGroup)
+        qb_custom_list = existing_qb.get('CustomField')
+        if qb_custom_list is None:
+            # If still None, we assume no custom fields exist on this object
+            qb_custom_list = []
+            
+        n_custom = {cf['Name']: cf.get('StringValue', '') for cf in qb_payload.get('CustomField', [])}
+        o_custom = {cf['Name']: cf.get('StringValue', '') for cf in qb_custom_list}
+        
+        logging.debug(f"Comparing Custom Fields for {existing_qb.get('DisplayName')}:")
+        logging.debug(f"  Existing (o_custom): {json.dumps(o_custom)}")
+        logging.debug(f"  New (n_custom): {json.dumps(n_custom)}")
+        
+        for name, nv in n_custom.items():
+            # Only compare/sync custom fields that are actually defined in QuickBooks
+            if name not in self.qb.active_custom_field_names:
+                logging.debug(f"Skipping comparison for custom field '{name}' as it is not defined in QuickBooks.")
+                continue
 
-        n_phone = qb_payload.get('PrimaryPhone', {}).get('FreeFormNumber') if qb_payload.get('PrimaryPhone') else ""
-        o_phone = existing_qb.get('PrimaryPhone', {}).get('FreeFormNumber') if existing_qb.get('PrimaryPhone') else ""
-        if n_phone != o_phone: return True, "Phone changed"
-
-        n_addr = qb_payload.get('BillAddr', {})
-        o_addr = existing_qb.get('BillAddr', {})
-        if n_addr or o_addr:
-            for field in ['Line1', 'Line2', 'City', 'CountrySubDivisionCode', 'PostalCode']:
-                if (n_addr.get(field) or "") != (o_addr.get(field) or ""):
-                    return True, f"Address {field} changed"
+            ov = o_custom.get(name, "")
+            if nv != ov:
+                logging.info(f"Custom Field '{name}' changed: '{ov}' -> '{nv}'")
+                changes.append({"field": name, "old": ov, "new": nv})
                 
-        return False, "No changes detected"
+        return len(changes) > 0, changes
 
     def run(self):
         logging.info("Starting Sync Routine")
@@ -425,8 +738,17 @@ class SyncRoutine:
         self.summary['status'] = 'Running'
         self._save_summary_json()
         try:
-            # 0. Fetch PCO Custom Field Definitions
+            # 0. Fetch PCO and QB Custom Field Definitions
             self.pc.get_field_definitions()
+            self.qb.get_custom_field_definitions()
+
+            # Warn about missing custom fields once per run
+            configured_custom_fields = set(self.qb.custom_fields_map.values())
+            missing_in_qb = configured_custom_fields - self.qb.active_custom_field_names
+            if missing_in_qb:
+                msg = f"WARNING: The following custom fields are configured but NOT active in QuickBooks: {', '.join(missing_in_qb)}. They will be skipped during sync to prevent redundant updates."
+                logging.warning(msg)
+                self.summary['logs'].append(msg)
 
             # 1. Fetch all PC members
             pc_person_ids = self.pc.get_list_results()
@@ -442,18 +764,28 @@ class SyncRoutine:
             qb_name_map = {}
             
             for qb_cust in all_qb_customers:
-                pc_id = self._get_pc_id_from_qb_customer(qb_cust)
+                pc_id = qb_cust.get('Fax', {}).get('FreeFormNumber', '').strip()
                 if pc_id:
+                    if pc_id in qb_id_map:
+                        prev_id = qb_id_map[pc_id].get('Id')
+                        curr_id = qb_cust.get('Id')
+                        logging.warning(f"DUPLICATE PC_ID DETECTED in QuickBooks: PC ID {pc_id} is used by both QB ID {prev_id} and QB ID {curr_id}. Will use ID {curr_id} for sync.")
                     qb_id_map[pc_id] = qb_cust
                 
                 display_name = qb_cust.get('DisplayName')
                 if display_name:
                     qb_name_map[display_name] = qb_cust
                     
-            logging.info(f"Mapped {len(qb_id_map)} customers by PC_ID and {len(qb_name_map)} by Name from QB")
+            logging.info(f"Loaded {len(all_qb_customers)} customers from QB. Mapped {len(qb_id_map)} unique PC IDs.")
 
-            # 3. Sync
+            processed_count = 0
             for pc_id in pc_person_ids:
+                processed_count += 1
+                
+                # Save status every 10 records for dashboard progress
+                if processed_count % 10 == 0:
+                    self._save_summary_json()
+
                 try:
                     # Fetch detailed data for mapping
                     detailed_pc = self.pc.get_person_details(pc_id)
@@ -461,19 +793,72 @@ class SyncRoutine:
                     
                     qb_payload = self._map_pc_to_qb(detailed_pc)
 
-                    # Priority 1: Match by linked PC ID
+                    # Priority 1: Match by linked PC ID (Primary Unique Key)
                     existing_qb = qb_id_map.get(pc_id)
+                    if existing_qb:
+                        logging.debug(f"Match found by PC ID for {person_name} (ID: {existing_qb.get('Id')})")
                     
-                    # Priority 2: Fallback to match by Name (to prevent duplicates and link existing ones)
+                    # Priority 2: Match by target DisplayName (to link existing unlinked records)
                     if not existing_qb:
-                        existing_qb = qb_name_map.get(person_name)
-                        if existing_qb:
-                            logging.info(f"Match found by name for {person_name}. Linking to PC ID {pc_id}.")
+                        target_display_name = qb_payload.get('DisplayName')
+                        name_match = qb_name_map.get(target_display_name)
+                        if name_match:
+                            # NO-STEAL CHECK: Only match by name if the record has NO pc_id or the MINE pc_id
+                            existing_pc_id = name_match.get('Fax', {}).get('FreeFormNumber', '').strip()
+                            if not existing_pc_id or existing_pc_id == pc_id:
+                                existing_qb = name_match
+                                logging.info(f"Match found by target DisplayName for {target_display_name} (ID: {existing_qb.get('Id')}). Linking to PC ID {pc_id}.")
+                            else:
+                                logging.debug(f"Skipping name match for {target_display_name} (ID: {name_match.get('Id')}) because it belongs to a different PC ID ({existing_pc_id}).")
+
+                    # Priority 3: Final fallback to raw PCO name (legacy cleanup)
+                    if not existing_qb:
+                        name_match = qb_name_map.get(person_name)
+                        if name_match:
+                            # NO-STEAL CHECK
+                            existing_pc_id = name_match.get('Fax', {}).get('FreeFormNumber', '').strip()
+                            if not existing_pc_id or existing_pc_id == pc_id:
+                                existing_qb = name_match
+                                logging.info(f"Match found by raw name for {person_name} (ID: {existing_qb.get('Id')}). Linking to PC ID {pc_id}.")
+                            else:
+                                logging.debug(f"Skipping raw name match for {person_name} because it belongs to a different PC ID.")
 
                     if existing_qb:
-                        has_changed, change_reason = self._has_customer_changed(existing_qb, qb_payload)
+                        # Check for Name Conflict before updating
+                        target_display_name = qb_payload.get('DisplayName')
+                        if target_display_name and existing_qb.get('DisplayName') != target_display_name:
+                            conflicting_qb = qb_name_map.get(target_display_name)
+                            if conflicting_qb and conflicting_qb.get('Id') != existing_qb.get('Id'):
+                                logging.warning(f"NAME CONFLICT: ID {existing_qb.get('Id')} ({person_name}) cannot be renamed to '{target_display_name}' because ID {conflicting_qb.get('Id')} already has that name. Please merge these records in QuickBooks.")
+                                # We skip the name change in the payload to avoid 400 error, but keep other updates
+                                qb_payload['DisplayName'] = existing_qb.get('DisplayName')
+
+                    if existing_qb:
+                        # IMPORTANT: Some environments don't return CustomField in bulk queries.
+                        # If CustomField is missing in the bulk data, we fetch the full object to be 100% sure.
+                        if existing_qb.get('CustomField') is None:
+                            logging.debug(f"CustomField missing in bulk data for {person_name}, fetching detail...")
+                            try:
+                                existing_qb = self.qb.get_customer(existing_qb['Id'])
+                                logging.debug(f"FULL QB CUSTOMER for {person_name}: {json.dumps(existing_qb, indent=2)}")
+                            except Exception as e:
+                                logging.warning(f"Could not fetch detailed QB customer for {person_name}: {e}")
+                                # Continue with the bulk data if detail fetch fails
+
+                        has_changed, changes = self._has_customer_changed(existing_qb, qb_payload)
                         if has_changed:
-                            logging.info(f"Info changed for {person_name}: {change_reason}. Updating QuickBooks...")
+                            # Merge DefinitionIds from existing customer into payload
+                            o_custom = {cf['Name']: cf.get('DefinitionId') for cf in existing_qb.get('CustomField', [])}
+                            for cf in qb_payload.get('CustomField', []):
+                                if cf['Name'] in o_custom:
+                                    cf['DefinitionId'] = o_custom[cf['Name']]
+                            
+                            change_summary = ", ".join([c['field'] for c in changes])
+                            logging.info(f"Info changed for {person_name}: {change_summary}")
+                            for c in changes:
+                                logging.info(f"  - {c['field']}: '{c['old']}' -> '{c['new']}'")
+                            
+                            logging.info(f"Updating QuickBooks for {person_name}...")
                             try:
                                 updated_qb = self.qb.update_customer(existing_qb['Id'], existing_qb['SyncToken'], qb_payload)
                             except requests.HTTPError as e:
@@ -489,19 +874,19 @@ class SyncRoutine:
                             # Update local maps with new data (important for SyncToken and PC_ID link)
                             qb_id_map[pc_id] = updated_qb
                             qb_name_map[person_name] = updated_qb
-                            self._log_record("UPDATED", person_name)
-                            self._record_member_event(pc_id, person_name, 'UPDATED', change_reason)
+                            self._log_record("UPDATED", person_name, change_summary)
+                            self._record_member_event(pc_id, person_name, 'UPDATED', change_summary, changes, display_name=qb_payload.get('DisplayName'))
                             self.summary['updated'] += 1
                         else:
                             logging.info(f"Skipping {person_name}: Info was not changed.")
-                            self._record_member_event(pc_id, person_name, 'NO_CHANGE', 'Info was not changed')
+                            self._record_member_event(pc_id, person_name, 'NO_CHANGE', 'Info was not changed', display_name=qb_payload.get('DisplayName'))
                     else:
                         new_qb = self.qb.create_customer(qb_payload)
                         # Link newly created customer in our maps
                         qb_id_map[pc_id] = new_qb
                         qb_name_map[person_name] = new_qb
                         self._log_record("CREATED", person_name)
-                        self._record_member_event(pc_id, person_name, 'CREATED')
+                        self._record_member_event(pc_id, person_name, 'CREATED', display_name=qb_payload.get('DisplayName'))
                         self.summary['created'] += 1
 
                 except Exception as e:
@@ -509,6 +894,10 @@ class SyncRoutine:
                     self.summary['errors'] += 1
                     self._log_record("ERROR", f"ID {pc_id}", str(e))
                     self._record_member_event(pc_id, f"ID {pc_id}", 'ERROR', str(e))
+
+                # Periodic status save for dashboard progress
+                if processed_count % 10 == 0:
+                    self._save_summary_json()
 
             self._save_member_history()
             self.send_summary_email()
@@ -520,9 +909,15 @@ class SyncRoutine:
             self._save_summary_json()
 
         except Exception as e:
-            logging.critical(f"Sync Routine failed: {e}")
-            self.summary['status'] = 'Failed'
-            self.summary['errors'] += 1
+            logging.error(f"Error during Sync Routine: {str(e)}")
+            self.summary['status'] = 'Error'
+            self.summary['fatal_error'] = str(e)
+            self._save_summary_json()
+            # Still try to send email if configured
+            try:
+                self.send_summary_email()
+            except Exception as email_err:
+                logging.error(f"Failed to send error notification email: {email_err}")
             self.summary['end_time'] = datetime.now().isoformat()
             self._log_record("FATAL ERROR", "", str(e))
             self._save_summary_json()

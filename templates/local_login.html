@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Local Login | PCO-QB Sync</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        body {
+            background-color: #0f172a;
+            font-family: 'Inter', sans-serif;
+            background-image: 
+                radial-gradient(circle at 15% 50%, rgba(99, 102, 241, 0.15) 0%, transparent 50%),
+                radial-gradient(circle at 85% 30%, rgba(236, 72, 153, 0.15) 0%, transparent 50%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0;
+            color: #f8fafc;
+        }
+        .glass-card {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+        .gradient-text {
+            background: linear-gradient(135deg, #a855f7 0%, #ec4899 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .input-field {
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: white;
+            transition: all 0.2s;
+        }
+        .input-field:focus {
+            border-color: #6366f1;
+            box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+            outline: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="glass-card w-full max-w-[400px] p-10 rounded-3xl space-y-8 animate-in fade-in zoom-in duration-500">
+        <div class="text-center space-y-4">
+            <div class="w-16 h-16 bg-amber-500/10 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-amber-500/20">
+                <i data-lucide="key" class="w-8 h-8 text-amber-400"></i>
+            </div>
+            <h1 class="text-3xl font-bold tracking-tight">Local Login</h1>
+            <p class="text-slate-400 text-sm font-medium">Secondary Administration Access</p>
+        </div>
+
+        <form action="/local-login" method="POST" class="space-y-6">
+            <div class="space-y-2">
+                <label class="text-xs font-bold text-slate-500 uppercase tracking-widest pl-1">Username</label>
+                <div class="relative">
+                    <i data-lucide="user" class="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500"></i>
+                    <input type="text" name="username" required 
+                        class="input-field w-full py-3.5 pl-11 pr-4 rounded-xl text-sm" placeholder="admin">
+                </div>
+            </div>
+
+            <div class="space-y-2">
+                <label class="text-xs font-bold text-slate-500 uppercase tracking-widest pl-1">Password</label>
+                <div class="relative">
+                    <i data-lucide="lock" class="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500"></i>
+                    <input type="password" name="password" required 
+                        class="input-field w-full py-3.5 pl-11 pr-4 rounded-xl text-sm" placeholder="••••••••">
+                </div>
+            </div>
+
+            {% if error %}
+            <div class="bg-rose-500/10 border border-rose-500/20 rounded-xl p-3 flex items-center gap-3 text-rose-400 text-xs font-medium">
+                <i data-lucide="alert-circle" class="w-4 h-4 shrink-0"></i>
+                {{ error }}
+            </div>
+            {% endif %}
+
+            <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white py-4 rounded-2xl font-semibold transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98] shadow-lg shadow-indigo-500/20">
+                Sign In
+            </button>
+        </form>
+
+        <div class="pt-6 border-t border-slate-700/30 text-center">
+            <a href="/" class="text-xs text-slate-500 hover:text-slate-300 transition-colors flex items-center justify-center gap-1.5 font-medium">
+                <i data-lucide="arrow-left" class="w-3 h-3"></i>
+                Back to SSO Login
+            </a>
+        </div>
+    </div>
+    <script>
+        lucide.createIcons();
+    </script>
+</body>
+</html>

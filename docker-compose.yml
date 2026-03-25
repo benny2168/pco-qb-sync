@@ -6,11 +6,16 @@ services:
     container_name: pco-qb-sync
     restart: unless-stopped
     ports:
-      - "8377:8080"
+      - "8337:8080"
     volumes:
       - ./.env:/app/.env
       - ./logs:/app/logs
       - ./config.json:/app/config.json
-      - ./sync_history.json:/app/sync_history.json
+      - ./app.py:/app/app.py
+      - ./sync_pc_to_qb.py:/app/sync_pc_to_qb.py
+      - ./sync_donations_qb_to_pc.py:/app/sync_donations_qb_to_pc.py
+      - ./dashboard.html:/app/dashboard.html
+      - ./data:/app/data
+      - ./static:/app/static
     environment:
       - TZ=America/Chicago

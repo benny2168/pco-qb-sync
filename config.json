@@ -1,7 +1,8 @@
 {
     "planning_center": {
         "base_url": "https://api.planningcenteronline.com",
-        "head_of_household_list_id": "2552744"
+        "head_of_household_list_id": "2552744",
+        "display_name_format": "{first_name} {middle_name} [\"{nickname}\"] {last_name} [({prayer_group})]"
     },
     "quickbooks": {
         "base_url": "https://sandbox-quickbooks.api.intuit.com",
@@ -10,6 +11,14 @@
             "nickname": "Nickname",
             "prayer_group": "PrayerGroup"
         }
+    },
+    "donation_sync": {
+        "enabled": true,
+        "lookback_days": 30,
+        "default_fund_name": "General Fund",
+        "payment_source_id": "58369",
+        "sync_frequency": "daily",
+        "confirmation_email": "admin@example.com"
     },
     "email": {
         "smtp_server": "smtp.gmail.com",

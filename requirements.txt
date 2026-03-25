@@ -2,3 +2,5 @@ flask
 apscheduler
 requests
 python-dotenv
+msal
+flask-session

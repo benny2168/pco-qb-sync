@@ -9,8 +9,10 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application code
 COPY app.py .
 COPY sync_pc_to_qb.py .
-COPY dashboard.html .
+COPY sync_donations_qb_to_pc.py .
+COPY templates templates
 COPY config.json .
+COPY static static
 
 # Create logs directory
 RUN mkdir -p /app/logs

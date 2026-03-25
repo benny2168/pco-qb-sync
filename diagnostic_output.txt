@@ -1,0 +1,134 @@
+QuickBooks Custom Fields Diagnostic Tool
+======================================================================
+
+Configuration:
+  Base URL: https://sandbox-quickbooks.api.intuit.com
+  Realm ID: 9341456139860418
+  Environment: SANDBOX
+
+Authenticating...
+✓ Authentication successful
+
+======================================================================
+TEST 1: Preferences Endpoint (Custom Field Definitions)
+======================================================================
+
+Attempting basic preferences query...
+✓ Basic preferences access: SUCCESS
+
+SalesFormsPrefs keys: ['UsingProgressInvoicing', 'CustomField', 'CustomTxnNumbers', 'EmailCopyToCompany', 'AllowDeposit', 'AllowDiscount', 'DefaultDiscountAccount', 'AllowEstimates', 'ETransactionEnabledStatus', 'ETransactionAttachPDF', 'ETransactionPaymentEnabled', 'IPNSupportEnabled', 'AllowServiceDate', 'AllowShipping', 'DefaultTerms', 'AutoApplyCredit', 'AutoApplyPayments', 'UsingPriceLevels', 'DefaultCustomerMessage']
+
+CustomField data found:
+[
+  {
+    "CustomField": [
+      {
+        "Name": "SalesFormsPrefs.UseSalesCustom3",
+        "Type": "BooleanType",
+        "BooleanValue": false
+      },
+      {
+        "Name": "SalesFormsPrefs.UseSalesCustom1",
+        "Type": "BooleanType",
+        "BooleanValue": false
+      },
+      {
+        "Name": "SalesFormsPrefs.UseSalesCustom2",
+        "Type": "BooleanType",
+        "BooleanValue": false
+      }
+    ]
+  }
+]
+
+----------------------------------------------------------------------
+Attempting with enhancedAllCustomFields parameter...
+✓ Enhanced preferences access: SUCCESS
+
+Enhanced CustomField data:
+[
+  {
+    "CustomField": [
+      {
+        "Name": "SalesFormsPrefs.UseSalesCustom3",
+        "Type": "BooleanType",
+        "BooleanValue": false
+      },
+      {
+        "Name": "SalesFormsPrefs.UseSalesCustom1",
+        "Type": "BooleanType",
+        "BooleanValue": false
+      },
+      {
+        "Name": "SalesFormsPrefs.UseSalesCustom2",
+        "Type": "BooleanType",
+        "BooleanValue": false
+      }
+    ]
+  }
+]
+
+======================================================================
+TEST 2: Customer Query (Actual Custom Field Values)
+======================================================================
+
+Fetching all customers to check for custom fields...
+
+✓ Checked 496 customers
+✓ Found 0 customers with custom fields
+
+⚠ WARNING: No customers have custom field values!
+
+  Possible reasons:
+  1. The custom field was created but never assigned to any customer
+  2. The custom field is for a different entity (Invoice, not Customer)
+  3. You need to manually add the custom field value to at least one customer
+
+======================================================================
+TEST 3: Single Customer Read (Full Field Structure)
+======================================================================
+
+Fetching a sample customer ID...
+✓ Using customer: A S Varughese (ID: 287)
+
+Reading full customer details...
+
+✓ Customer read successful
+
+CustomField array: []
+
+⚠ CustomField array is empty for this customer
+
+======================================================================
+DIAGNOSTIC SUMMARY & RECOMMENDATIONS
+======================================================================
+
+If no custom fields were found, try these steps:
+
+1. **Verify the custom field is for Customers:**
+   - In QuickBooks, go to Settings → Custom Fields
+   - Make sure the field is enabled for CUSTOMERS, not just invoices/sales forms
+
+2. **Assign the custom field to a customer manually:**
+   - Open any customer in QuickBooks
+   - Look for your custom field in the customer form
+   - Enter a value and save
+   - Then re-run this diagnostic
+
+3. **Check your QuickBooks subscription level:**
+   - Custom fields require QuickBooks Online Plus or higher
+   - Simple Start and Essentials don't support custom fields
+
+4. **Verify you're in the right environment:**
+   - If you created the field in Production but testing in Sandbox (or vice versa)
+   - The environments are separate
+
+5. **OAuth scope check:**
+   - Your app needs 'com.intuit.quickbooks.accounting' scope
+   - You may need to re-authorize if you added custom fields after initial setup
+
+6. **Try the QuickBooks API Explorer:**
+   - Visit: https://developer.intuit.com/app/developer/qbo/docs/api/accounting/all-entities/customer
+   - Use the API Explorer to query your customer
+   - Compare results with this script
+    
