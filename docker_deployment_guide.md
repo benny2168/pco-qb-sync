@@ -15,9 +15,9 @@ version: "3.8"
     ports:
       - "8337:8080"
     volumes:
-      - ./config:/app/config
-      - ./data:/app/data
-      - ./logs:/app/logs
+      - /volume1/docker/pco-qb-sync/config:/app/config
+      - /volume1/docker/pco-qb-sync/data:/app/data
+      - /volume1/docker/pco-qb-sync/logs:/app/logs
     environment:
       - TZ=America/Chicago
       # Portainer: Add the environment variables listed below
@@ -25,13 +25,16 @@ version: "3.8"
 
 ## Persistent Volume Mounts
 
-To ensure your configuration and sync history persist between container updates, you MUST bind the following host paths to the container:
+To ensure your configuration and sync history persist between container updates, you MUST bind the following host paths to the container. 
 
-| Host Path | Container Path | Description |
-|-----------|----------------|-------------|
-| `./config` | `/app/config` | Stores `.env` and `config.json` |
-| `./data` | `/app/data` | Stores all persistent state (auth, sync history, cursor) |
-| `./logs` | `/app/logs` | Sync logs and server logs |
+> [!TIP]
+> **Synology Absolute Paths**: On Synology, absolute paths usually start with `/volume1/`. You can find the exact path by right-clicking a folder in **File Station** > **Properties** > **Location**.
+
+| Host Path (Synology Example) | Container Path | Description |
+|------------------------------|----------------|-------------|
+| `/volume1/docker/pco-qb-sync/config` | `/app/config` | Stores `.env` and `config.json` |
+| `/volume1/docker/pco-qb-sync/data` | `/app/data` | Stores all persistent state (auth, sync history, cursor) |
+| `/volume1/docker/pco-qb-sync/logs` | `/app/logs` | Sync logs and server logs |
 
 > [!TIP]
 > **Migration Note**: If you are upgrading from an older version, move your `.env` and `config.json` files from the root into the `./config/` directory on your host before starting the container.
