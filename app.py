@@ -532,6 +532,7 @@ def api_status():
         "schedule": os.getenv("SYNC_SCHEDULE", "Not Set"),
         "next_run": next_run,
         "recipient_email": os.getenv("SMTP_RECIPIENT_EMAIL", ""),
+        "pco_list_id": os.getenv("PCO_LIST_ID", "2552744"),
         "display_name_format": load_config().get('planning_center', {}).get('display_name_format', '{first_name} {last_name}')
     })
 
@@ -592,7 +593,13 @@ def api_save_member_settings():
             update_env_file('SMTP_RECIPIENT_EMAIL', email)
             os.environ['SMTP_RECIPIENT_EMAIL'] = email
 
-        # 3. Update Display Name Format
+        # 3. Update PCO List ID
+        pco_list_id = data.get('pco_list_id', '').strip()
+        if pco_list_id:
+            update_env_file('PCO_LIST_ID', pco_list_id)
+            os.environ['PCO_LIST_ID'] = pco_list_id
+
+        # 4. Update Display Name Format
         fmt = data.get('display_name_format', '').strip()
         if fmt:
             config = load_config()

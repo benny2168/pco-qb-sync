@@ -71,12 +71,12 @@ def rotate_logs(keep: int = 10, prefix: str = "sync"):
 class PlanningCenterClient:
     def __init__(self, config: Dict[str, Any]):
         self.base_url = config.get('base_url')
-        self.head_of_household_list_id = config.get('head_of_household_list_id')
+        self.head_of_household_list_id = os.getenv('PCO_LIST_ID') or config.get('head_of_household_list_id')
         
         if not self.base_url:
             raise KeyError("Planning Center 'base_url' missing in config.json")
         if not self.head_of_household_list_id:
-            logging.warning("PCO 'head_of_household_list_id' missing in config.json")
+            logging.warning("PCO 'PCO_LIST_ID' (env) or 'head_of_household_list_id' (config) missing")
 
         self.app_id = os.getenv('PCO_APP_ID')
         self.token = os.getenv('PCO_PAT')
