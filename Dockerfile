@@ -10,6 +10,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY app.py .
 COPY sync_pc_to_qb.py .
 COPY sync_donations_qb_to_pc.py .
+COPY config.json .
+COPY .env.example .
 COPY templates templates
 COPY static static
 
