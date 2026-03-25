@@ -67,9 +67,9 @@
         <!-- Header -->
         <header class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div>
-                <h1 class="text-3xl font-bold tracking-tight flex items-center gap-3">
+                <h1 class="text-3xl font-bold tracking-tight flex items-center gap-2">
                     <img src="/static/logos/pco-logo.svg?v=2" class="h-10 w-auto" alt="PCO">
-                    <span class="gradient-text ml-1 text-4xl font-bold relative -top-[6px]">↔</span>
+                    <span class="gradient-text text-4xl font-bold relative -top-[6px]">↔</span>
                     <img src="/static/logos/qb-logo.svg?v=2" class="h-10 w-auto" alt="QuickBooks">
                     <span class="gradient-text">Sync</span>
                 </h1>
@@ -116,13 +116,13 @@
         <!-- Tab Bar -->
         <div class="mt-6 flex gap-1 bg-slate-800/30 rounded-xl p-1 w-fit">
             <button onclick="switchTab('sync')" id="tab-sync" class="tab-btn px-5 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 bg-indigo-600/20 text-indigo-300">
-                <i data-lucide="refresh-cw" class="w-4 h-4"></i> Member Sync
+                <i data-lucide="users" class="w-4 h-4"></i> Member Sync
             </button>
             <button onclick="switchTab('donations')" id="tab-donations" class="tab-btn px-5 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 text-slate-400 hover:text-slate-200">
                 <i data-lucide="banknote" class="w-4 h-4"></i> Donation Sync
             </button>
             <button onclick="switchTab('members')" id="tab-members" class="tab-btn px-5 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 text-slate-400 hover:text-slate-200">
-                <i data-lucide="users" class="w-4 h-4"></i> Member History
+                <i data-lucide="history" class="w-4 h-4"></i> Member History
             </button>
         </div>
 
@@ -294,8 +294,8 @@
                     <i data-lucide="history" class="w-3.5 h-3.5"></i> Clear History
                 </button>
             </div>
-            <div class="glass-card rounded-2xl p-5">
-                <div class="flex items-center gap-3 mb-4">
+            <div class="glass-card rounded-2xl p-6 w-full">
+                <div class="flex items-center gap-3 mb-6">
                     <div class="relative flex-1">
                         <i data-lucide="search" class="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2"></i>
                         <input type="text" id="memberSearch" placeholder="Search by name or ID..." class="w-full bg-slate-900/50 border border-slate-700/50 rounded-lg pl-9 pr-3 py-2 text-sm text-slate-300 focus:outline-none focus:border-indigo-500 transition-colors">
