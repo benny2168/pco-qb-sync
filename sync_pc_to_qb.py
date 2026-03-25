@@ -403,8 +403,16 @@ class SyncRoutine:
         load_dotenv(dotenv_path=env_path, override=True)
 
         self.config = config
-        self.pc = PlanningCenterClient(config['planning_center'])
-        self.qb = QuickBooksClient(config['quickbooks'])
+        
+        planning_center_cfg = config.get('planning_center')
+        if not planning_center_cfg:
+            raise KeyError("'planning_center' section missing in config.json")
+        self.pc = PlanningCenterClient(planning_center_cfg)
+        
+        quickbooks_cfg = config.get('quickbooks')
+        if not quickbooks_cfg:
+            raise KeyError("'quickbooks' section missing in config.json")
+        self.qb = QuickBooksClient(quickbooks_cfg)
         self.summary = {
             'status': 'Running',
             'start_time': datetime.now().isoformat(),

@@ -104,6 +104,8 @@ def save_json_with_retries(path, data, retries=5, delay=0.1):
             raise
     return False
 
+    return False
+
 def update_env_file(key, value):
     """Update or add a key-value pair in the .env file without using atomic rename,
     to avoid 'Device or resource busy' errors on Docker volume-mounted files.
@@ -271,22 +273,6 @@ def run_scheduled_donation_sync():
         routine.run()
     except Exception as e:
         logging.error(f"Scheduled donation sync failed: {e}", exc_info=True)
-
-def load_config(config_path=None):
-    """Load configuration from config.json (priority: /app/config/config.json)."""
-    if not config_path:
-        config_path = os.path.join(BASE_DIR, 'config', 'config.json')
-        if not os.path.exists(config_path):
-            config_path = os.path.join(BASE_DIR, 'config.json')
-        
-    if not os.path.exists(config_path):
-        return {}
-    try:
-        with open(config_path, 'r', encoding='utf-8') as f:
-            return json.load(f)
-    except Exception as e:
-        logging.error(f"Error loading config: {e}")
-        return {}
 
 def reschedule_donation_sync():
     """Update the donation sync job based on donation_sync_settings.json (priority: data/)."""
@@ -540,7 +526,7 @@ def api_status():
         "schedule": os.getenv("SYNC_SCHEDULE", "Not Set"),
         "next_run": next_run,
         "recipient_email": os.getenv("SMTP_RECIPIENT_EMAIL", ""),
-        "display_name_format": load_config(os.path.join(BASE_DIR, 'config.json')).get('planning_center', {}).get('display_name_format', '{first_name} {last_name}')
+        "display_name_format": load_config().get('planning_center', {}).get('display_name_format', '{first_name} {last_name}')
     })
 
 @app.route('/api/logs/<filename>')
@@ -560,8 +546,7 @@ def api_logs(filename):
 @login_required
 def api_sync_now():
     try:
-        config_path = os.path.join(BASE_DIR, 'config.json')
-        config = load_config(config_path)
+        config = load_config()
         log_file = setup_logging(config, prefix="sync")
         rotate_logs(keep=10)
         routine = SyncRoutine(config)
@@ -604,8 +589,7 @@ def api_save_member_settings():
         # 3. Update Display Name Format
         fmt = data.get('display_name_format', '').strip()
         if fmt:
-            config_path = os.path.join(BASE_DIR, 'config.json')
-            config = load_config(config_path)
+            config = load_config()
             if 'planning_center' not in config:
                 config['planning_center'] = {}
             config['planning_center']['display_name_format'] = fmt
