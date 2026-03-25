@@ -818,7 +818,7 @@ class SyncRoutine:
 
             # 1. Fetch all PC members
             pc_person_ids = self.pc.get_list_results()
-            logging.info(f"Found {len(pc_person_ids)} member IDs in PC Head of Household list")
+            logging.info(f"Found {len(pc_person_ids)} member IDs in PCO list {self.pco.head_of_household_list_id}")
 
             # 2. Fetch all QB customers and build lookup maps
             logging.info("Building lookup maps from QuickBooks customers...")
