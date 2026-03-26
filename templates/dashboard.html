@@ -895,6 +895,34 @@
                         </button>
                     </div>
 
+                    <!-- Admin Login History Card -->
+                    <div class="glass-card rounded-2xl overflow-hidden">
+                        <button onclick="toggleCard('card-login-history'); loadAdminLogins();" class="w-full px-6 py-4 flex items-center justify-between hover:bg-white/5 transition-colors group">
+                            <div class="flex items-center gap-3">
+                                <i data-lucide="history" class="w-5 h-5 text-indigo-400"></i>
+                                <span class="font-semibold text-slate-200 group-hover:text-white transition-colors">Admin Login History</span>
+                            </div>
+                            <i data-lucide="chevron-down" class="w-5 h-5 text-slate-500 rotate-icon" id="icon-card-login-history"></i>
+                        </button>
+                        <div id="card-login-history" class="collapsible-content px-6 pb-6 hidden">
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-left">
+                                    <thead>
+                                        <tr class="border-b border-slate-800">
+                                            <th class="px-2 py-3 text-[10px] uppercase font-bold text-slate-500 tracking-wider">User</th>
+                                            <th class="px-2 py-3 text-[10px] uppercase font-bold text-slate-500 tracking-wider">Time</th>
+                                            <th class="px-2 py-3 text-[10px] uppercase font-bold text-slate-500 tracking-wider">IP Address</th>
+                                            <th class="px-2 py-3 text-[10px] uppercase font-bold text-slate-500 tracking-wider text-right">Method</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="adminLoginTableBody" class="divide-y divide-slate-800">
+                                        <!-- Dynamic Content -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
                 </div>
             </div>
         </div>
@@ -2302,8 +2330,49 @@
                 const confirmPassInput = document.getElementById('settingsConfirmLocalPassword');
                 if (newPassInput) newPassInput.value = '';
                 if (confirmPassInput) confirmPassInput.value = '';
+
+                // Also load login history if the card is open
+                if (!document.getElementById('card-login-history').classList.contains('hidden')) {
+                    loadAdminLogins();
+                }
             } catch (err) {
                 console.error('Failed to load local admin settings:', err);
+            }
+        }
+
+        async function loadAdminLogins() {
+            const tbody = document.getElementById('adminLoginTableBody');
+            try {
+                const resp = await fetch('/api/admin-logins');
+                const logs = await resp.json();
+                
+                if (!logs.length) {
+                    tbody.innerHTML = '<tr><td colspan="4" class="px-2 py-4 text-center text-slate-500 text-xs italic">No login history found</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = logs.map(log => `
+                    <tr class="hover:bg-white/5 transition-colors">
+                        <td class="px-2 py-3">
+                            <div class="text-xs font-medium text-slate-200">${log.username}</div>
+                        </td>
+                        <td class="px-2 py-3">
+                            <div class="text-[10px] text-slate-400 font-mono">${formatDate(log.timestamp)}</div>
+                        </td>
+                        <td class="px-2 py-3">
+                            <div class="text-[10px] text-slate-400 font-mono">${log.ip}</div>
+                        </td>
+                        <td class="px-2 py-3 text-right">
+                            <span class="px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider ${log.is_sso ? 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20' : 'bg-slate-500/10 text-slate-400 border border-slate-500/20'}">
+                                ${log.is_sso ? 'SSO' : 'Local'}
+                            </span>
+                        </td>
+                    </tr>
+                `).join('');
+                lucide.createIcons();
+            } catch (err) {
+                console.error('Failed to load admin logins:', err);
+                tbody.innerHTML = '<tr><td colspan="4" class="px-2 py-4 text-center text-rose-400 text-xs">Error loading logs</td></tr>';
             }
         }
 

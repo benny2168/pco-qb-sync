@@ -69,6 +69,36 @@ def save_auth_settings(settings):
     """Save auth settings to file."""
     return save_json_with_retries(AUTH_SETTINGS_PATH, settings)
 
+ADMIN_LOGINS_PATH = os.path.join(BASE_DIR, 'data', 'admin_logins.json')
+
+def log_admin_login(user_info):
+    """Log a successful admin login event (WHO, WHEN, WHERE)."""
+    try:
+        log_entry = {
+            'username': user_info.get('preferred_username') or user_info.get('name') or 'Unknown User',
+            'timestamp': datetime.now().isoformat(),
+            'ip': request.headers.get('X-Forwarded-For', request.remote_addr).split(',')[0].strip(),
+            'is_sso': user_info.get('is_sso', False)
+        }
+        
+        # Load existing logs (capped at 100 entries)
+        logs = []
+        if os.path.exists(ADMIN_LOGINS_PATH):
+            try:
+                logs = read_json_with_retries(ADMIN_LOGINS_PATH) or []
+            except Exception:
+                pass
+        
+        # Prepend new log
+        logs.insert(0, log_entry)
+        logs = logs[:100] # Keep last 100 logins
+        
+        os.makedirs(os.path.dirname(ADMIN_LOGINS_PATH), exist_ok=True)
+        save_json_with_retries(ADMIN_LOGINS_PATH, logs)
+        logging.info(f"Admin login logged: {log_entry['username']} @ {log_entry['ip']}")
+    except Exception as e:
+        logging.error(f"Failed to log admin login: {e}")
+
 def read_json_with_retries(path, retries=5, delay=0.1):
     """Attempt to read a JSON file with retries to handle transient file lock/deadlock errors."""
     for i in range(retries):
@@ -508,6 +538,7 @@ def authorized():
         user_claims = result.get("id_token_claims")
         user_claims["is_sso"] = True
         session["user"] = user_claims
+        log_admin_login(session['user'])
         logging.info(f"User {session['user'].get('preferred_username')} logged in successfully.")
         return redirect(url_for("index"))
         
@@ -565,6 +596,7 @@ def local_login():
                 'preferred_username': username,
                 'is_sso': False
             }
+            log_admin_login(session['user'])
             return redirect(url_for('dashboard_page'))
         else:
             error = "Invalid username or password."
@@ -1125,6 +1157,33 @@ def api_save_donation_settings():
         return jsonify({"status": "Success", "settings": existing})
     except Exception as e:
         logging.error(f"Failed to save donation settings: {e}")
+        return jsonify({"error": str(e)}), 500
+
+# ---------------------------------------------------------------------------
+# Routes — Admin Logs
+# ---------------------------------------------------------------------------
+
+@app.route('/api/admin-logins')
+@login_required
+def api_admin_logins():
+    """Retrieve the recent admin login history."""
+    try:
+        # Extra security check: only allow admins to view these logs
+        # Any user hitting this is logged in, but we check if they are SSO or Local Admin
+        user = session.get('user', {})
+        auth_settings = get_auth_settings() or {}
+        is_sso = user.get('is_sso', False) or user.get('oid') is not None
+        is_local_admin = not is_sso and user.get('preferred_username') == auth_settings.get('local_admin_user')
+        
+        if not (is_sso or is_local_admin):
+            return jsonify({"error": "Admin privileges required."}), 403
+
+        if os.path.exists(ADMIN_LOGINS_PATH):
+            logs = read_json_with_retries(ADMIN_LOGINS_PATH) or []
+            return jsonify(logs)
+        return jsonify([])
+    except Exception as e:
+        logging.error(f"Error fetching admin logins: {e}")
         return jsonify({"error": str(e)}), 500
 
 # ---------------------------------------------------------------------------
