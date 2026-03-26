@@ -19,7 +19,7 @@ if not os.path.isfile(ENV_PATH):
     if os.path.isfile(fallback_path):
         ENV_PATH = fallback_path
 
-load_dotenv(dotenv_path=ENV_PATH, override=True)
+load_dotenv(dotenv_path=ENV_PATH, override=False)
 
 # Load configuration
 def load_config(config_path: Optional[str] = None) -> Dict[str, Any]:

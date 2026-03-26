@@ -38,8 +38,12 @@ if not os.path.isfile(ENV_PATH):
     if os.path.isfile(fallback_path):
         ENV_PATH = fallback_path
 
-load_dotenv(dotenv_path=ENV_PATH, override=True)
+# Prefer Docker environment variables over .env file on initial load
+load_dotenv(dotenv_path=ENV_PATH, override=False)
 logging.info(f"Loaded environment from: {ENV_PATH}")
+# Log available keys (masked)
+keys = [k for k in os.environ.keys() if k.startswith(('PCO_', 'QB_', 'MAILCHIMP_', 'CHURCH_'))]
+logging.info(f"Available App Env Keys: {keys}")
 
 AUTH_SETTINGS_PATH = os.path.join(BASE_DIR, 'data', 'auth_settings.json')
 
@@ -85,34 +89,45 @@ def read_json_with_retries(path, retries=5, delay=0.1):
             raise
     return None
 
-def save_json_with_retries(path, data, retries=5, delay=0.1):
-    """Attempt to save a JSON file atomically with retries. 
-    Falls back to direct write if 'Device or resource busy' (Docker volume issues)."""
+def robust_save_file(path, content, is_json=True, retries=5, delay=0.1):
+    """Attempt to save a file atomically with retries and a direct-write fallback."""
     for i in range(retries):
+        temp_path = f"{path}.tmp"
         try:
-            temp_path = f"{path}.tmp"
             with open(temp_path, 'w', encoding='utf-8') as f:
-                json.dump(data, f, indent=4)
+                if is_json:
+                    json.dump(content, f, indent=4)
+                else:
+                    f.write(content)
                 f.flush()
-                # Ensure it's on disk before rename
                 os.fsync(f.fileno())
             os.replace(temp_path, path)
             return True
         except OSError as e:
-            if e.errno == 35: # Resource deadlock avoided
-                if i < retries - 1:
-                    time.sleep(delay)
-                    continue
-            elif e.errno == 16: # Device or resource busy (Docker mount rename across boundaries)
-                logging.warning(f"Atomic rename failed (errno 16). Falling back to direct write for {path}.")
+            if e.errno == 16: # Device or resource busy
+                logging.warning(f"Atomic rename failed (errno 16) for {path}. Falling back to direct write.")
                 try:
                     with open(path, 'w', encoding='utf-8') as f:
-                        json.dump(data, f, indent=4)
+                        if is_json:
+                            json.dump(content, f, indent=4)
+                        else:
+                            f.write(content)
                     return True
                 except Exception as ex:
-                    logging.error(f"Fallback write also failed: {ex}")
-            raise
+                    logging.error(f"Fallback write also failed for {path}: {ex}")
+                    return False
+            if i < retries - 1:
+                time.sleep(delay)
+                continue
+            logging.error(f"Failed to save {path} after {retries} retries: {e}")
+            return False
+        except Exception as e:
+            logging.error(f"Unexpected error saving {path}: {e}")
+            return False
     return False
+
+def save_json_with_retries(path, data, retries=5, delay=0.1):
+    return robust_save_file(path, data, is_json=True, retries=retries, delay=delay)
 
 def update_env_file(key, value):
     """Update or add a key-value pair in the .env file without using atomic rename,
@@ -135,13 +150,14 @@ def update_env_file(key, value):
     if not found:
         new_lines.append(f"{key}='{value}'\n")
     
-    if os.path.isdir(ENV_PATH):
-        logging.error(f"Cannot update .env: {ENV_PATH} is a directory. Check Docker mounts.")
+    if robust_save_file(ENV_PATH, "".join(new_lines), is_json=False):
+        logging.info(f"Successfully updated {key} in {ENV_PATH}")
+        # Reload immediately
+        load_dotenv(dotenv_path=ENV_PATH, override=True)
+        return True
+    else:
+        logging.error(f"Failed to update {key} in {ENV_PATH}")
         return False
-
-    with open(ENV_PATH, 'w') as f:
-        f.writelines(new_lines)
-    return True
 
 app = Flask(__name__, static_folder='static', static_url_path='/static')
 # Handle reverse proxy headers (X-Forwarded-Proto, X-Forwarded-Host)
@@ -510,7 +526,8 @@ def api_me():
 @app.route('/api/status')
 @login_required
 def api_status():
-    load_dotenv(dotenv_path=ENV_PATH, override=True)
+    # Reload settings periodically; prefer Docker env if set
+    load_dotenv(dotenv_path=ENV_PATH, override=False)
 
     status_path = os.path.join(BASE_DIR, 'data', 'latest_sync_status.json')
     if not os.path.exists(status_path):
@@ -618,8 +635,11 @@ def api_save_member_settings():
             config = load_config(config_path)
             if 'planning_center' not in config:
                 config['planning_center'] = {}
-            config['planning_center']['display_name_format'] = fmt
-            save_json_with_retries(config_path, config)
+            if save_json_with_retries(config_path, config):
+                logging.info(f"Successfully updated Display Name Format in {config_path}")
+            else:
+                logging.error(f"Failed to update Display Name Format in {config_path}")
+                return jsonify({"error": "Failed to save configuration. Check folder permissions."}), 500
 
         return jsonify({"status": "Success"})
     except Exception as e:
@@ -793,7 +813,8 @@ def api_donation_sync_now():
 
         # Save initial status
         status_path = os.path.join(BASE_DIR, 'data', 'latest_donation_sync_status.json')
-        save_json_with_retries(status_path, {"status": "Running", "log_file": os.path.basename(log_file)})
+        if not save_json_with_retries(status_path, {"status": "Running", "log_file": os.path.basename(log_file)}):
+            logging.error(f"Failed to save initial donation sync status to {status_path}")
 
         routine = DonationSyncRoutine(config, donation_settings)
         threading.Thread(target=routine.run, daemon=True).start()
@@ -892,8 +913,14 @@ def api_get_donation_settings():
 def api_get_pco_funds():
     """Fetch all funds from PC Giving."""
     try:
+        app_id = os.getenv('PCO_APP_ID')
+        pat = os.getenv('PCO_PAT')
+        if not app_id or not pat:
+            logging.error(f"PCO Credentials missing. APP_ID present: {bool(app_id)}, PAT present: {bool(pat)}")
+            return jsonify({"error": "PCO_APP_ID or PCO_PAT missing in environment. Check Settings tab."}), 400
+            
         client = PlanningCenterGivingClient()
-        funds_list = client.get_all_funds() # [{"id": "...", "name": "..."}]
+        funds_list = client.get_all_funds() 
         return jsonify(funds_list)
     except Exception as e:
         logging.error(f"Failed to fetch PCO funds: {e}")
@@ -951,7 +978,11 @@ def api_save_donation_settings():
             if key in data:
                 existing[key] = data[key]
 
-        save_json_with_retries(settings_path, existing)
+        if save_json_with_retries(settings_path, existing):
+            logging.info(f"Successfully saved donation settings to {settings_path}")
+        else:
+            logging.error(f"Failed to save donation settings to {settings_path}")
+            return jsonify({"error": "Failed to write settings file. Check folder permissions."}), 500
 
         # After saving, we should also reschedule the donation sync
         reschedule_donation_sync()

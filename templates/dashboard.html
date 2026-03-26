@@ -948,6 +948,11 @@
                     }
                 }
 
+                if (data.pco_list_id !== undefined) {
+                    const listInput = document.getElementById('pcoListIdInput');
+                    if (listInput) listInput.value = data.pco_list_id;
+                }
+
                 if (data.display_name_format !== undefined) {
                     const dnInput = document.getElementById('displayNameFormatInput');
                     if (document.activeElement !== dnInput) {
@@ -1005,14 +1010,9 @@
                     if (initialEl) initialEl.innerText = (user.name || 'U').charAt(0).toUpperCase();
                     if (profileEl) profileEl.classList.remove('hidden');
                     
-                    if (user.is_sso) {
+                     if (user.is_sso) {
                         const trigger = document.getElementById('localSettingsTrigger');
                         if (trigger) trigger.classList.remove('hidden');
-                    }
-                    
-                    if (data && data.pco_list_id) {
-                        const listInput = document.getElementById('pcoListIdInput');
-                        if (listInput) listInput.value = data.pco_list_id;
                     }
                 }
             } catch (err) {
@@ -1672,15 +1672,27 @@
 
                 // Populate QB entities datalist
                 const datalist = document.getElementById('qbEntitiesList');
-                if (datalist) {
+                if (datalist && Array.isArray(qbAccountsItems)) {
                     datalist.innerHTML = qbAccountsItems.map(e => `<option value="${e.name}">(${e.type})</option>`).join('');
+                } else if (datalist) {
+                    datalist.innerHTML = '';
+                    if (qbAccountsItems && qbAccountsItems.error) {
+                        console.error('QB Entities Error:', qbAccountsItems.error);
+                    }
                 }
 
                 // Populate Default Fund Dropdown
                 const defaultFundSelect = document.getElementById('donDefaultFund');
-                defaultFundSelect.innerHTML = pcoFunds.map(f => 
-                    `<option value="${f.name}">${f.name}</option>`
-                ).join('');
+                if (Array.isArray(pcoFunds)) {
+                    defaultFundSelect.innerHTML = pcoFunds.map(f => 
+                        `<option value="${f.name}">${f.name}</option>`
+                    ).join('');
+                } else {
+                    defaultFundSelect.innerHTML = `<option value="">Error loading funds</option>`;
+                    if (pcoFunds && pcoFunds.error) {
+                        console.error('PCO Funds Error:', pcoFunds.error);
+                    }
+                }
 
                 const resp = await fetch('/api/donation-sync-settings');
                 donationSettings = await resp.json();
@@ -1723,9 +1735,9 @@
             const row = document.createElement('div');
             row.className = 'flex items-center gap-2';
             
-            const options = pcoFunds.map(f => 
+            const options = Array.isArray(pcoFunds) ? pcoFunds.map(f => 
                 `<option value="${f.name}" ${f.name === pcoName ? 'selected' : ''}>${f.name}</option>`
-            ).join('');
+            ).join('') : `<option value="">(Error)</option>`;
 
             row.innerHTML = `
                 <input type="text" list="qbEntitiesList" placeholder="QB Account/Item" value="${qbName}" class="fund-qb flex-1 bg-slate-900/50 border border-slate-700/50 rounded-lg px-3 py-2 text-sm text-slate-300 focus:outline-none focus:border-indigo-500 transition-colors">
@@ -1773,12 +1785,13 @@
                     btn.innerHTML = '<i data-lucide="check" class="w-4 h-4"></i> Saved!';
                     setTimeout(() => { btn.innerHTML = origHTML; btn.disabled = false; lucide.createIcons(); }, 1500);
                 } else {
-                    btn.innerHTML = '<i data-lucide="x" class="w-4 h-4"></i> Error';
-                    setTimeout(() => { btn.innerHTML = origHTML; btn.disabled = false; lucide.createIcons(); }, 2000);
+                    const errData = await resp.json().catch(() => ({}));
+                    btn.innerHTML = `<i data-lucide="x" class="w-4 h-4"></i> ${errData.error || 'Save Failed'}`;
+                    setTimeout(() => { btn.innerHTML = origHTML; btn.disabled = false; lucide.createIcons(); }, 3500);
                 }
             } catch(e) {
                 btn.innerHTML = '<i data-lucide="x" class="w-4 h-4"></i> Error';
-                setTimeout(() => { btn.innerHTML = origHTML; btn.disabled = false; lucide.createIcons(); }, 2000);
+                setTimeout(() => { btn.innerHTML = origHTML; btn.disabled = false; lucide.createIcons(); }, 3500);
             }
             lucide.createIcons();
         }
