@@ -744,34 +744,34 @@ class SyncRoutine:
             ("BillAddr", "Address", "address")
         ]
         
-            # Special check for Email, Phone, Address as they are nested
-            for qb_key, display_name, internal_key in fields_to_check:
-                qb_val = existing_qb.get(qb_key)
-                new_val = qb_payload.get(qb_key)
-                
-                # Normalize for comparison
-                if qb_key == "PrimaryEmailAddr":
-                    qb_val = qb_val.get('Address') if qb_val else ""
-                    new_val = new_val.get('Address') if new_val else ""
-                elif qb_key == "PrimaryPhone":
-                    qb_val = qb_val.get('FreeFormNumber') if qb_val else ""
-                    new_val = new_val.get('FreeFormNumber') if new_val else ""
-                elif qb_key == "BillAddr":
-                    # Compare critical address fields, carefully avoiding 'None' string conversion
-                    def get_addr_part(addr_obj, key):
-                        if not addr_obj: return ""
-                        val = addr_obj.get(key, "")
-                        return str(val) if val is not None else ""
+        # Special check for Email, Phone, Address as they are nested
+        for qb_key, display_name, internal_key in fields_to_check:
+            qb_val = existing_qb.get(qb_key)
+            new_val = qb_payload.get(qb_key)
+            
+            # Normalize for comparison
+            if qb_key == "PrimaryEmailAddr":
+                qb_val = qb_val.get('Address') if qb_val else ""
+                new_val = new_val.get('Address') if new_val else ""
+            elif qb_key == "PrimaryPhone":
+                qb_val = qb_val.get('FreeFormNumber') if qb_val else ""
+                new_val = new_val.get('FreeFormNumber') if new_val else ""
+            elif qb_key == "BillAddr":
+                # Compare critical address fields, carefully avoiding 'None' string conversion
+                def get_addr_part(addr_obj, key):
+                    if not addr_obj: return ""
+                    val = addr_obj.get(key, "")
+                    return str(val) if val is not None else ""
 
-                    qb_parts = [get_addr_part(qb_val, k) for k in ['Line1', 'City', 'CountrySubDivisionCode', 'PostalCode']]
-                    new_parts = [get_addr_part(new_val, k) for k in ['Line1', 'City', 'CountrySubDivisionCode', 'PostalCode']]
-                    
-                    qb_val = ", ".join(qb_parts)
-                    new_val = ", ".join(new_parts)
+                qb_parts = [get_addr_part(qb_val, k) for k in ['Line1', 'City', 'CountrySubDivisionCode', 'PostalCode']]
+                new_parts = [get_addr_part(new_val, k) for k in ['Line1', 'City', 'CountrySubDivisionCode', 'PostalCode']]
                 
-                # Final normalization: treat None as empty string and strip
-                qb_val_str = str(qb_val if qb_val is not None else "").strip()
-                new_val_str = str(new_val if new_val is not None else "").strip()
+                qb_val = ", ".join(qb_parts)
+                new_val = ", ".join(new_parts)
+            
+            # Final normalization: treat None as empty string and strip
+            qb_val_str = str(qb_val if qb_val is not None else "").strip()
+            new_val_str = str(new_val if new_val is not None else "").strip()
             
             if qb_val_str != new_val_str:
                 logging.info(f"Field {display_name} changed: '{qb_val_str}' -> '{new_val_str}'")
