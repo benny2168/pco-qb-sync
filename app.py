@@ -873,9 +873,9 @@ def api_qb_credentials():
     if request.method == 'POST':
         try:
             data = request.get_json()
-            keys = ['QB_CLIENT_ID', 'QB_CLIENT_SECRET', 'QB_REFRESH_TOKEN', 'QB_REALM_ID', 'QB_ENVIRONMENT']
+            keys = ['QB_CLIENT_ID', 'QB_CLIENT_SECRET', 'QB_REFRESH_TOKEN', 'QB_REALM_ID', 'QB_ENVIRONMENT', 'QB_REDIRECT_URI']
             for key in keys:
-                if key in data and data[key]:
+                if key in data and data[key] is not None:
                     update_env_file(key, data[key])
             return jsonify({"status": "Success"})
         except Exception as e:
@@ -888,7 +888,8 @@ def api_qb_credentials():
         "QB_CLIENT_SECRET": "********" if os.getenv("QB_CLIENT_SECRET") else "",
         "QB_REFRESH_TOKEN": "********" if os.getenv("QB_REFRESH_TOKEN") else "",
         "QB_REALM_ID": os.getenv("QB_REALM_ID", ""),
-        "QB_ENVIRONMENT": os.getenv("QB_ENVIRONMENT", "sandbox")
+        "QB_ENVIRONMENT": os.getenv("QB_ENVIRONMENT", "sandbox"),
+        "QB_REDIRECT_URI": os.getenv("QB_REDIRECT_URI", "")
     })
 
 @app.route('/api/member-sync-settings', methods=['POST'])
@@ -1400,6 +1401,15 @@ def api_config():
             response_data["general"]["SYNC_SCHEDULE"] = build_field("SYNC_SCHEDULE", config["SYNC_SCHEDULE"])
     if "FLASK_SECRET_KEY" in config:
         response_data["general"]["FLASK_SECRET_KEY"] = build_field("FLASK_SECRET_KEY", config["FLASK_SECRET_KEY"])
+
+    # Ensure essential keys are always present in their sections even if missing from .env
+    for k, hint in CONFIG_HINTS.items():
+        # Check which section this key should belong to
+        for section_name, filter_func in sections_map.items():
+            if filter_func(k):
+                if k not in response_data[section_name]:
+                    response_data[section_name][k] = build_field(k, os.getenv(k, ""))
+                break
 
     return jsonify(response_data)
 
