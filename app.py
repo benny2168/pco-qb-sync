@@ -548,9 +548,17 @@ def authorized():
 
 @app.route("/logout")
 def logout():
+    user = session.get('user', {})
+    is_sso = user.get('is_sso', False)
+    
     # Clear the local Flask session
     session.clear()
     
+    if not is_sso:
+        # Local admin logout: just back to login page
+        return redirect(url_for('login'))
+    
+    # SSO logout: redirect to Microsoft logout
     post_logout_uri = REDIRECT_URI_OVERRIDE or url_for('index', _external=True)
     if REDIRECT_URI_OVERRIDE:
         # If we have an override, we need the base part (strip /callback)
