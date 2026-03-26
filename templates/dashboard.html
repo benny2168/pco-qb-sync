@@ -2346,6 +2346,10 @@
                 const resp = await fetch('/api/admin-logins');
                 const logs = await resp.json();
                 
+                if (!Array.isArray(logs)) {
+                    throw new Error(logs.error || 'Invalid log data received');
+                }
+
                 if (!logs.length) {
                     tbody.innerHTML = '<tr><td colspan="4" class="px-2 py-4 text-center text-slate-500 text-xs italic">No login history found</td></tr>';
                     return;

@@ -535,11 +535,11 @@ def authorized():
             logging.warning("User is not a member of the required access group.")
             return "Access Denied: You are not a member of the required access group.", 403
 
-        user_claims = result.get("id_token_claims")
+        user_claims = dict(result.get("id_token_claims", {}))
         user_claims["is_sso"] = True
         session["user"] = user_claims
         log_admin_login(session['user'])
-        logging.info(f"User {session['user'].get('preferred_username')} logged in successfully.")
+        logging.info(f"User {session['user'].get('preferred_username')} logged in successfully via SSO.")
         return redirect(url_for("index"))
         
     except Exception as e:
@@ -549,16 +549,19 @@ def authorized():
 @app.route("/logout")
 def logout():
     user = session.get('user', {})
-    is_sso = user.get('is_sso', False)
+    # More robust check: use both is_sso flag and oid presence
+    is_sso = user.get('is_sso') is True or user.get('oid') is not None
     
     # Clear the local Flask session
     session.clear()
     
     if not is_sso:
         # Local admin logout: just back to login page
+        logging.info("Local logout completed.")
         return redirect(url_for('login'))
     
     # SSO logout: redirect to Microsoft logout
+    logging.info("Initiating SSO global logout.")
     post_logout_uri = REDIRECT_URI_OVERRIDE or url_for('index', _external=True)
     if REDIRECT_URI_OVERRIDE:
         # If we have an override, we need the base part (strip /callback)
