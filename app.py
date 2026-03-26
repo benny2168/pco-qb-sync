@@ -11,6 +11,7 @@ import time
 import errno
 from datetime import datetime
 from functools import wraps
+import secrets
 
 from flask import Flask, request, jsonify, send_file, session, redirect, url_for, render_template
 from flask_session import Session
@@ -247,7 +248,8 @@ CONFIG_HINTS = {
     'FLASK_PORT': 'Internal port for the web server (default 8080)',
     'PCO_CONFIG_DIR': 'Absolute path to config folder on host',
     'PCO_DATA_DIR': 'Absolute path to data folder (auth, history)',
-    'PCO_LOGS_DIR': 'Absolute path to logs folder'
+    'PCO_LOGS_DIR': 'Absolute path to logs folder',
+    'QB_REDIRECT_URI': 'Optional override for QB OAuth callback (usually /qb-callback)'
 }
 
 
@@ -579,6 +581,108 @@ def logout():
     return redirect(
         f"{AUTHORITY}/oauth2/v2.0/logout?post_logout_redirect_uri={post_logout_uri}"
     )
+
+# ---------------------------------------------------------------------------
+# Routes — QuickBooks OAuth
+# ---------------------------------------------------------------------------
+@app.route('/qb-auth')
+@login_required
+def qb_auth():
+    """Initiates the QuickBooks OAuth2 flow."""
+    client_id = os.getenv('QB_CLIENT_ID')
+    if not client_id:
+        return "QuickBooks Client ID missing in settings.", 400
+        
+    # Production vs Sandbox base URL is handled by Intuit based on the client_id,
+    # but the auth endpont is generally stable.
+    auth_url = "https://appcenter.intuit.com/connect/oauth2"
+    
+    # Construct redirect URI
+    if REDIRECT_URI_OVERRIDE:
+        # If we have a global override, use it but swap the path
+        base = REDIRECT_URI_OVERRIDE.split(REDIRECT_PATH)[0].rstrip('/')
+        redirect_uri = f"{base}/qb-callback"
+    else:
+        redirect_uri = url_for("qb_callback", _external=True)
+    
+    params = {
+        'client_id': client_id,
+        'response_type': 'code',
+        'scope': 'com.intuit.quickbooks.accounting',
+        'redirect_uri': redirect_uri,
+        'state': secrets.token_hex(16)
+    }
+    session['qb_state'] = params['state']
+    
+    from urllib.parse import urlencode
+    target = f"{auth_url}?{urlencode(params)}"
+    logging.info(f"Redirecting user to QuickBooks Auth: {redirect_uri}")
+    return redirect(target)
+
+@app.route('/qb-callback')
+@login_required
+def qb_callback():
+    """Handles the callback from QuickBooks and saves tokens."""
+    state = request.args.get('state')
+    code = request.args.get('code')
+    realm_id = request.args.get('realmId')
+    
+    if state != session.pop('qb_state', None):
+        return "Invalid OAuth state", 400
+    if not code:
+        return "No authorization code received", 400
+        
+    client_id = os.getenv('QB_CLIENT_ID')
+    client_secret = os.getenv('QB_CLIENT_SECRET')
+    
+    # Construct redirect URI (must match the one used in /qb-auth)
+    if REDIRECT_URI_OVERRIDE:
+        base = REDIRECT_URI_OVERRIDE.split(REDIRECT_PATH)[0].rstrip('/')
+        redirect_uri = f"{base}/qb-callback"
+    else:
+        redirect_uri = url_for("qb_callback", _external=True)
+
+    token_url = "https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer"
+    payload = {
+        'grant_type': 'authorization_code',
+        'code': code,
+        'redirect_uri': redirect_uri
+    }
+    
+    logging.info("Exchanging Intuit auth code for tokens...")
+    import base64
+    auth_header = base64.b64encode(f"{client_id}:{client_secret}".encode()).decode()
+    headers = {
+        'Authorization': f'Basic {auth_header}',
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Accept': 'application/json'
+    }
+    
+    resp = requests.post(token_url, data=payload, headers=headers)
+    if not resp.ok:
+        logging.error(f"Failed to exchange QB tokens: {resp.status_code} - {resp.text}")
+        return f"QuickBooks Token Exchange Failed: {resp.text}", 401
+        
+    data = resp.json()
+    refresh_token = data.get('refresh_token')
+    
+    if refresh_token:
+        # Persist new token and realm ID
+        updates = {'QB_REFRESH_TOKEN': refresh_token}
+        if realm_id:
+            updates['QB_REALM_ID'] = realm_id
+            
+        if update_env_file_bulk(updates):
+            logging.info(f"Successfully updated .env with new QuickBooks tokens. RealmID: {realm_id}")
+            # Also update current env
+            os.environ['QB_REFRESH_TOKEN'] = refresh_token
+            if realm_id: os.environ['QB_REALM_ID'] = realm_id
+            
+            return redirect(url_for('dashboard_page') + "?qb=success")
+        else:
+            return "Failed to save tokens to .env file", 500
+            
+    return "No refresh token received", 401
 
 # ---------------------------------------------------------------------------
 # Routes — Dashboard
