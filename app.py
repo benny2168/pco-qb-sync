@@ -18,6 +18,8 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.middleware.proxy_fix import ProxyFix
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
+
+print(f"DEBUG: app.py loaded from {os.path.abspath(__file__)}")
 from dotenv import load_dotenv
 import msal
 import requests
@@ -549,22 +551,29 @@ def authorized():
 @app.route("/logout")
 def logout():
     user = session.get('user', {})
-    # More robust check: use both is_sso flag and oid presence
-    is_sso = user.get('is_sso') is True or user.get('oid') is not None
+    if not user:
+        logging.info("Logout requested but no user session found. Redirecting to login.")
+        return redirect(url_for('login'))
+
+    # Strict check: only redirect to global logout if it's explicitly an SSO session
+    # Local admin sessions MUST NOT have an 'oid' and MUST have 'is_sso': False
+    is_sso = (user.get('is_sso') is True) or (user.get('oid') is not None)
+    
+    logging.info(f"Logout initiated. User: {user.get('preferred_username', 'Unknown')}, "
+                 f"is_sso_flag: {user.get('is_sso')}, has_oid: {user.get('oid') is not None}, "
+                 f"Final is_sso decision: {is_sso}")
     
     # Clear the local Flask session
     session.clear()
     
     if not is_sso:
-        # Local admin logout: just back to login page
-        logging.info("Local logout completed.")
+        logging.info("Local logout path taken. Redirecting to login.")
         return redirect(url_for('login'))
     
-    # SSO logout: redirect to Microsoft logout
-    logging.info("Initiating SSO global logout.")
+    # SSO logout Path
+    logging.info("Global SSO logout path taken.")
     post_logout_uri = REDIRECT_URI_OVERRIDE or url_for('index', _external=True)
     if REDIRECT_URI_OVERRIDE:
-        # If we have an override, we need the base part (strip /callback)
         post_logout_uri = REDIRECT_URI_OVERRIDE.replace(REDIRECT_PATH, '')
     
     return redirect(
@@ -1183,10 +1192,14 @@ def api_admin_logins():
         # Any user hitting this is logged in, but we check if they are SSO or Local Admin
         user = session.get('user', {})
         auth_settings = get_auth_settings() or {}
-        is_sso = user.get('is_sso', False) or user.get('oid') is not None
+        # Unify detection logic
+        is_sso = user.get('is_sso') is True or user.get('oid') is not None
         is_local_admin = not is_sso and user.get('preferred_username') == auth_settings.get('local_admin_user')
         
+        logging.debug(f"Admin log access check: username={user.get('preferred_username')}, is_sso={is_sso}, is_local_admin={is_local_admin}")
+
         if not (is_sso or is_local_admin):
+            logging.warning(f"Unauthorized admin-logins access attempt: {user.get('preferred_username')}")
             return jsonify({"error": "Admin privileges required."}), 403
 
         if os.path.exists(ADMIN_LOGINS_PATH):
