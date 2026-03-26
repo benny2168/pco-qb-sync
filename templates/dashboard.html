@@ -1565,7 +1565,7 @@
             return 'manual';
         }
 
-        function parseDonCronToUI(cron) {
+        function setupDonCronUI(cron) {
             if (!cron || cron === 'manual') {
                 donSyncFreq.value = 'manual';
                 populateDonDayDropdown();
