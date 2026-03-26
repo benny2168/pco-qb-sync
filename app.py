@@ -38,8 +38,8 @@ if not os.path.isfile(ENV_PATH):
     if os.path.isfile(fallback_path):
         ENV_PATH = fallback_path
 
-# Prefer Docker environment variables over .env file on initial load
-load_dotenv(dotenv_path=ENV_PATH, override=False)
+# Prefer .env file over Docker environment variables for rotating tokens
+load_dotenv(dotenv_path=ENV_PATH, override=True)
 logging.info(f"Loaded environment from: {ENV_PATH}")
 # Log available keys (masked)
 keys = [k for k in os.environ.keys() if k.startswith(('PCO_', 'QB_', 'MAILCHIMP_', 'CHURCH_'))]
@@ -526,8 +526,8 @@ def api_me():
 @app.route('/api/status')
 @login_required
 def api_status():
-    # Reload settings periodically; prefer Docker env if set
-    load_dotenv(dotenv_path=ENV_PATH, override=False)
+    # Reload settings periodically; prefer .env for rotating tokens
+    load_dotenv(dotenv_path=ENV_PATH, override=True)
 
     status_path = os.path.join(BASE_DIR, 'data', 'latest_sync_status.json')
     if not os.path.exists(status_path):

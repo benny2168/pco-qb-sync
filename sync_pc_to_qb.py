@@ -19,7 +19,8 @@ if not os.path.isfile(ENV_PATH):
     if os.path.isfile(fallback_path):
         ENV_PATH = fallback_path
 
-load_dotenv(dotenv_path=ENV_PATH, override=False)
+# Load environment variables; prefer .env file for dynamic rotation
+load_dotenv(dotenv_path=ENV_PATH, override=True)
 
 # Load configuration
 def load_config(config_path: Optional[str] = None) -> Dict[str, Any]:
@@ -206,7 +207,10 @@ class QuickBooksClient:
                                 f.write(line)
                         if not found:
                             f.write(f"QB_REFRESH_TOKEN='{self.refresh_token}'\n")
-                    logging.info("New QB refresh token automatically saved to .env")
+                    
+                    # Update current environment to ensure immediate use
+                    os.environ['QB_REFRESH_TOKEN'] = self.refresh_token
+                    logging.info("New QB refresh token automatically saved to .env and environment.")
                 except Exception as e:
                     logging.error(f"Failed to auto-save refresh token: {e}")
             else:

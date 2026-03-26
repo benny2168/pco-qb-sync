@@ -22,7 +22,8 @@ if not os.path.isfile(ENV_PATH):
     if os.path.isfile(fallback_path):
         ENV_PATH = fallback_path
 
-load_dotenv(dotenv_path=ENV_PATH, override=False)
+# Load environment variables; prefer .env file for dynamic rotation
+load_dotenv(dotenv_path=ENV_PATH, override=True)
 
 # ---------------------------------------------------------------------------
 # Planning Center Giving API Client
