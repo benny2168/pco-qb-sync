@@ -25,6 +25,45 @@ if not os.path.isfile(ENV_PATH):
 # Load environment variables; prefer .env file for dynamic rotation
 load_dotenv(dotenv_path=ENV_PATH, override=True)
 
+def robust_save_file(path, content, is_json=True, retries=5, delay=0.1):
+    """Attempt to save a file atomically with retries and a direct-write fallback.
+    Useful for Docker environments where os.replace can fail with errno 16 (busy).
+    """
+    for i in range(retries):
+        temp_path = f"{path}.tmp"
+        try:
+            with open(temp_path, 'w', encoding='utf-8') as f:
+                if is_json:
+                    json.dump(content, f, indent=4)
+                else:
+                    f.write(content)
+                f.flush()
+                os.fsync(f.fileno())
+            os.replace(temp_path, path)
+            return True
+        except OSError as e:
+            if e.errno == 16: # Device or resource busy
+                logging.warning(f"Atomic rename failed (errno 16) for {path}. Falling back to direct write.")
+                try:
+                    with open(path, 'w', encoding='utf-8') as f:
+                        if is_json:
+                            json.dump(content, f, indent=4)
+                        else:
+                            f.write(content)
+                    return True
+                except Exception as ex:
+                    logging.error(f"Fallback write also failed for {path}: {ex}")
+                    return False
+            if i < retries - 1:
+                time.sleep(delay)
+                continue
+            logging.error(f"Failed to save {path} after {retries} retries: {e}")
+            return False
+        except Exception as e:
+            logging.error(f"Unexpected error saving {path}: {e}")
+            return False
+    return False
+
 # ---------------------------------------------------------------------------
 # Planning Center Giving API Client
 # ---------------------------------------------------------------------------
@@ -290,27 +329,8 @@ class DonationSyncRoutine:
         }
 
     def _save_state(self, retries=5, delay=0.1):
-        """Persist state to disk using atomic rename with retries."""
-        for i in range(retries):
-            try:
-                temp_path = self.state_path + ".tmp"
-                with open(temp_path, "w", encoding="utf-8") as f:
-                    json.dump(self.state, f, indent=2)
-                    f.flush()
-                    os.fsync(f.fileno())
-                os.replace(temp_path, self.state_path)
-                return True
-            except OSError as e:
-                if e.errno == 35: # Resource deadlock avoided
-                    if i < retries - 1:
-                        time.sleep(delay)
-                        continue
-                logging.error(f"Failed to save donation_sync_state.json (attempt {i+1}): {e}")
-                if i == retries - 1: raise
-            except Exception as e:
-                logging.error(f"Unexpected error saving donation sync state: {e}")
-                break
-        return False
+        """Persist state to disk using robust save."""
+        return robust_save_file(self.state_path, self.state, is_json=True, retries=retries, delay=delay)
 
     def _load_history(self) -> Dict[str, Any]:
         """Load persistent donation history (per-transaction)."""
@@ -323,27 +343,8 @@ class DonationSyncRoutine:
         return {}
 
     def _save_history(self, retries=5, delay=0.1):
-        """Save donation history to file using atomic rename with retries."""
-        for i in range(retries):
-            try:
-                temp_path = self.history_path + ".tmp"
-                with open(temp_path, 'w', encoding='utf-8') as f:
-                    json.dump(self.donation_history, f, indent=4)
-                    f.flush()
-                    os.fsync(f.fileno())
-                os.replace(temp_path, self.history_path)
-                return True
-            except OSError as e:
-                if e.errno == 35: # Resource deadlock avoided
-                    if i < retries - 1:
-                        time.sleep(delay)
-                        continue
-                logging.error(f"Failed to save donation history (attempt {i+1}): {e}")
-                if i == retries - 1: raise
-            except Exception as e:
-                logging.error(f"Unexpected error saving donation history: {e}")
-                break
-        return False
+        """Save donation history to file using robust save."""
+        return robust_save_file(self.history_path, self.donation_history, is_json=True, retries=retries, delay=delay)
 
     def _record_donation_event(self, qb_txn_id: str, donor_name: str, action: str, detail: str = "", pc_person_id: Optional[str] = None):
         """Record a sync event for a specific QB transaction."""
@@ -550,6 +551,12 @@ class DonationSyncRoutine:
             logging.info("=" * 60)
             logging.info("Starting Donation Reverse Sync (QB → PCO Giving)")
             logging.info("=" * 60)
+            
+            # Reset summary and save immediately so dashboard shows 'Running' with 0s
+            self.summary["donations_created"] = 0
+            self.summary["donations_skipped"] = 0
+            self.summary["errors"] = 0
+            self.summary["logs"] = []
             self.summary["start_time"] = datetime.now().isoformat()
             self.summary["status"] = "Running"
             self._save_summary_status()
@@ -763,29 +770,13 @@ class DonationSyncRoutine:
                 os.remove(lock_path)
 
     def _save_summary_status(self, retries=5, delay=0.1):
-        """Save latest summary to a JSON file for the dashboard using atomic rename with retries."""
-        try:
-            path = os.path.join(self.base_dir, "data", "latest_donation_sync_status.json")
-            temp_path = path + ".tmp"
-            
-            for i in range(retries):
-                try:
-                    with open(temp_path, "w", encoding="utf-8") as f:
-                        json.dump(self.summary, f, indent=4)
-                        f.flush()
-                        os.fsync(f.fileno())
-                    os.replace(temp_path, path)
-                    return True
-                except OSError as e:
-                    if e.errno == 35: # Resource deadlock avoided
-                        if i < retries - 1:
-                            time.sleep(delay)
-                            continue
-                    logging.error(f"Failed to save donation sync status (attempt {i+1}): {e}")
-                    if i == retries - 1: raise
-        except Exception as e:
-            logging.error(f"Unexpected error saving donation sync status: {e}")
-        return False
+        """Save latest summary to a JSON file for the dashboard using robust save."""
+        path = os.path.join(self.base_dir, "data", "latest_donation_sync_status.json")
+        # Assuming robust_save_file is defined elsewhere and imported or a method of self.
+        # For this change, we're just replacing the body of _save_summary_status.
+        # If robust_save_file is not defined, this will cause a NameError.
+        # The user's instruction implies it will be available.
+        return robust_save_file(path, self.summary, is_json=True, retries=retries, delay=delay)
 
     def send_summary_email(self, fatal_error: str = None):
         """Send donation sync summary email."""

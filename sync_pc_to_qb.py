@@ -22,6 +22,45 @@ if not os.path.isfile(ENV_PATH):
 # Load environment variables; prefer .env file for dynamic rotation
 load_dotenv(dotenv_path=ENV_PATH, override=True)
 
+def robust_save_file(path, content, is_json=True, retries=5, delay=0.1):
+    """Attempt to save a file atomically with retries and a direct-write fallback.
+    Useful for Docker environments where os.replace can fail with errno 16 (busy).
+    """
+    for i in range(retries):
+        temp_path = f"{path}.tmp"
+        try:
+            with open(temp_path, 'w', encoding='utf-8') as f:
+                if is_json:
+                    json.dump(content, f, indent=4)
+                else:
+                    f.write(content)
+                f.flush()
+                os.fsync(f.fileno())
+            os.replace(temp_path, path)
+            return True
+        except OSError as e:
+            if e.errno == 16: # Device or resource busy
+                logging.warning(f"Atomic rename failed (errno 16) for {path}. Falling back to direct write.")
+                try:
+                    with open(path, 'w', encoding='utf-8') as f:
+                        if is_json:
+                            json.dump(content, f, indent=4)
+                        else:
+                            f.write(content)
+                    return True
+                except Exception as ex:
+                    logging.error(f"Fallback write also failed for {path}: {ex}")
+                    return False
+            if i < retries - 1:
+                time.sleep(delay)
+                continue
+            logging.error(f"Failed to save {path} after {retries} retries: {e}")
+            return False
+        except Exception as e:
+            logging.error(f"Unexpected error saving {path}: {e}")
+            return False
+    return False
+
 # Load configuration
 def load_config(config_path: Optional[str] = None) -> Dict[str, Any]:
     if not config_path:
@@ -479,27 +518,8 @@ class SyncRoutine:
         return {}
 
     def _save_member_history(self, retries=5, delay=0.1):
-        """Persist member history to disk using atomic rename with retries."""
-        for i in range(retries):
-            try:
-                temp_path = self.history_path + ".tmp"
-                with open(temp_path, 'w', encoding='utf-8') as f:
-                    json.dump(self.member_history, f, indent=2)
-                    f.flush()
-                    os.fsync(f.fileno())
-                os.replace(temp_path, self.history_path)
-                return True
-            except OSError as e:
-                if e.errno == 35: # Resource deadlock avoided
-                    if i < retries - 1:
-                        time.sleep(delay)
-                        continue
-                logging.error(f"Failed to save member_sync_history.json (attempt {i+1}): {e}")
-                if i == retries - 1: raise
-            except Exception as e:
-                logging.error(f"Unexpected error saving member history: {e}")
-                break
-        return False
+        """Persist member history to disk using robust save."""
+        return robust_save_file(self.history_path, self.member_history, is_json=True, retries=retries, delay=delay)
 
     def _record_member_event(self, pc_id: str, name: str, action: str, detail: str = "", changes: Optional[List[Dict[str, Any]]] = None, display_name: Optional[str] = None):
         """Append an event to a member's sync history."""
@@ -524,28 +544,10 @@ class SyncRoutine:
         self.member_history[pc_id]['events'] = self.member_history[pc_id]['events'][-100:]
 
     def _save_summary_json(self, retries=5, delay=0.1):
-        """Save the latest summary to data/latest_sync_status.json using atomic rename with retries."""
+        """Save the latest summary to data/latest_sync_status.json using robust save."""
         status_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'data', 'latest_sync_status.json')
-        temp_path = status_path + ".tmp"
-        
-        for i in range(retries):
-            try:
-                with open(temp_path, "w", encoding="utf-8") as f:
-                    json.dump({"status": self.summary["status"], "last_summary": self.summary}, f, indent=2)
-                    f.flush()
-                    os.fsync(f.fileno())
-                os.replace(temp_path, status_path)
-                return True
-            except OSError as e:
-                if e.errno == 35: # Resource deadlock avoided
-                    if i < retries - 1:
-                        time.sleep(delay)
-                        continue
-                logging.error(f"Failed to save status JSON (attempt {i+1}): {e}")
-            except Exception as e:
-                logging.error(f"Unexpected error saving status JSON: {e}")
-                break
-        return False
+        data = {"status": self.summary["status"], "last_summary": self.summary}
+        return robust_save_file(status_path, data, is_json=True, retries=retries, delay=delay)
 
     def _log_record(self, action: str, person_name: str, detail: str = ""):
         msg = f"{action}: {person_name} - {detail}"
