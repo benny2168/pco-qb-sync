@@ -131,6 +131,9 @@
             <button onclick="switchTab('members')" id="tab-members" class="tab-btn px-5 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 text-slate-400 hover:text-slate-200">
                 <i data-lucide="history" class="w-4 h-4"></i> Member History
             </button>
+            <button onclick="switchTab('settings')" id="tab-settings" class="tab-btn px-5 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 text-slate-400 hover:text-slate-200">
+                <i data-lucide="settings" class="w-4 h-4"></i> System Settings
+            </button>
         </div>
 
         <!-- Tab: Member Sync -->
@@ -514,6 +517,89 @@
             </section>
         </section>
         </div> <!-- end panel-donations -->
+        
+        <!-- Tab: System Settings -->
+        <div id="panel-settings" class="hidden">
+            <section class="mt-8">
+                <h2 class="text-xl font-semibold text-slate-200 mb-6 flex items-center gap-2">
+                    <i data-lucide="settings" class="w-5 h-5 text-indigo-400"></i>
+                    System & Connection Settings
+                </h2>
+        
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <!-- QuickBooks Connection -->
+                    <div class="glass-card rounded-2xl p-8">
+                        <h3 class="text-base font-semibold text-slate-200 mb-6 flex items-center gap-2">
+                            <img src="/static/logos/qb-logo.svg" class="h-5 w-auto" alt="QB">
+                            QuickBooks OAuth Credentials
+                        </h3>
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-xs font-medium text-slate-400 mb-2 uppercase tracking-wider">Client ID</label>
+                                <input type="text" id="qbClientId" placeholder="Get from Intuit Developer Portal" class="w-full bg-slate-900/50 border border-slate-700/50 rounded-lg px-3 py-2 text-sm text-slate-300 focus:outline-none focus:border-indigo-500 transition-colors">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-slate-400 mb-2 uppercase tracking-wider">Client Secret</label>
+                                <div class="relative">
+                                    <input type="password" id="qbClientSecret" placeholder="Keep current or enter new" class="w-full bg-slate-900/50 border border-slate-700/50 rounded-lg px-3 py-2 text-sm text-slate-300 focus:outline-none focus:border-indigo-500 transition-colors">
+                                    <button onclick="togglePassword('qbClientSecret')" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300">
+                                        <i data-lucide="eye" class="w-4 h-4"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-slate-400 mb-2 uppercase tracking-wider">Refresh Token</label>
+                                <div class="relative">
+                                    <textarea id="qbRefreshToken" rows="4" class="w-full bg-slate-900/50 border border-slate-700/50 rounded-lg px-3 py-2 text-sm text-slate-300 focus:outline-none focus:border-indigo-500 transition-colors font-mono" placeholder="Paste your new refresh token here..."></textarea>
+                                </div>
+                                <p class="text-[10px] text-slate-500 mt-2 flex items-center gap-1.5">
+                                    <i data-lucide="info" class="w-3 h-3 text-indigo-400"></i>
+                                    Note: Refresh tokens rotate. This UI allows you to manually provide a seed token if the connection is lost.
+                                </p>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-slate-400 mb-2 uppercase tracking-wider">Realm ID (Company ID)</label>
+                                <input type="text" id="qbRealmId" placeholder="1231460..." class="w-full bg-slate-900/50 border border-slate-700/50 rounded-lg px-3 py-2 text-sm text-slate-300 focus:outline-none focus:border-indigo-500 transition-colors">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-slate-400 mb-2 uppercase tracking-wider">Environment</label>
+                                <select id="qbEnv" class="w-full bg-slate-900/50 border border-slate-700/50 rounded-lg px-3 py-2 text-sm text-slate-300 focus:outline-none focus:border-indigo-500 transition-colors">
+                                    <option value="sandbox">Sandbox</option>
+                                    <option value="production">Production</option>
+                                </select>
+                            </div>
+                        </div>
+        
+                        <div class="mt-8 flex justify-between items-center">
+                            <div id="qbSavedFeedback" class="text-xs text-emerald-400 font-medium hidden">
+                                <i data-lucide="check-circle" class="w-3.5 h-3.5 inline mr-1"></i> Saved Successfully
+                            </div>
+                            <button onclick="saveQBCredentials()" id="saveQBCredsBtn" class="ml-auto px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium rounded-xl transition-all flex items-center gap-2 shadow-lg shadow-indigo-900/20 active:scale-95">
+                                <i data-lucide="save" class="w-4 h-4"></i>
+                                Save QB Credentials
+                            </button>
+                        </div>
+                    </div>
+        
+                    <!-- Help/Information -->
+                    <div class="space-y-6">
+                        <div class="glass-card rounded-2xl p-6 border-l-4 border-indigo-500">
+                             <h3 class="text-sm font-semibold text-slate-200 mb-4 flex items-center gap-2">
+                                <i data-lucide="help-circle" class="w-4 h-4 text-indigo-400"></i>
+                                How to get a Refresh Token
+                            </h3>
+                            <ol class="text-xs text-slate-400 space-y-3 list-decimal pl-4 leading-relaxed">
+                                <li>Log in to the <a href="https://developer.intuit.com/app/developer/playground" target="_blank" class="text-indigo-400 hover:underline">Intuit OAuth Playground</a>.</li>
+                                <li>Select your app and choice the <code class="bg-slate-800 px-1 rounded text-indigo-300">com.intuit.quickbooks.accounting</code> scope.</li>
+                                <li>Click <strong>Get Authorization Code</strong> and authorize access.</li>
+                                <li>Click <strong>Get Tokens</strong> to generate a fresh <strong>Refresh Token</strong>.</li>
+                                <li>Copy the <strong>Refresh Token</strong> and paste it into the form on the left.</li>
+                            </ol>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
     </div> <!-- end max-w container -->
 
     <!-- Member History Modal -->
@@ -540,13 +626,17 @@
             document.getElementById('panel-sync').classList.toggle('hidden', tab !== 'sync');
             document.getElementById('panel-members').classList.toggle('hidden', tab !== 'members');
             document.getElementById('panel-donations').classList.toggle('hidden', tab !== 'donations');
+            document.getElementById('panel-settings').classList.toggle('hidden', tab !== 'settings');
+            
             document.querySelectorAll('.tab-btn').forEach(btn => {
                 btn.className = 'tab-btn px-5 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 text-slate-400 hover:text-slate-200';
             });
             document.getElementById(`tab-${tab}`).className = 'tab-btn px-5 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 bg-indigo-600/20 text-indigo-300';
             lucide.createIcons();
+            
             if (tab === 'members') fetchMembers();
             if (tab === 'donations') { fetchDonationStatus(); loadDonationSettings(); }
+            if (tab === 'settings') loadQBCredentials();
         }
 
         // State
@@ -1952,6 +2042,86 @@
                 btn.disabled = false;
                 lucide.createIcons();
             }
+        }
+
+        // ── QuickBooks Credentials Logic ──────────────────────────────────
+        async function loadQBCredentials() {
+            try {
+                const res = await fetch('/api/qb-credentials');
+                const data = await res.json();
+                document.getElementById('qbClientId').value = data.QB_CLIENT_ID || '';
+                document.getElementById('qbClientSecret').value = data.QB_CLIENT_SECRET || '';
+                document.getElementById('qbRefreshToken').value = data.QB_REFRESH_TOKEN || '';
+                document.getElementById('qbRealmId').value = data.QB_REALM_ID || '';
+                document.getElementById('qbEnv').value = data.QB_ENVIRONMENT || 'sandbox';
+            } catch (err) {
+                console.error('Failed to load QB credentials:', err);
+                if (typeof showToast === 'function') showToast('Failed to load credentials', 'error');
+                else alert('Failed to load credentials');
+            }
+        }
+
+        async function saveQBCredentials() {
+            const btn = document.getElementById('saveQBCredsBtn');
+            const feedback = document.getElementById('qbSavedFeedback');
+            const origHTML = btn.innerHTML;
+            
+            btn.disabled = true;
+            btn.innerHTML = '<i data-lucide="loader" class="w-4 h-4 animate-spin"></i> Saving...';
+            lucide.createIcons();
+
+            const payload = {
+                QB_CLIENT_ID: document.getElementById('qbClientId').value.trim(),
+                QB_REALM_ID: document.getElementById('qbRealmId').value.trim(),
+                QB_ENVIRONMENT: document.getElementById('qbEnv').value
+            };
+
+            // Only send secret/token if they aren't the masked literals
+            const secret = document.getElementById('qbClientSecret').value;
+            if (secret && secret !== '********') payload.QB_CLIENT_SECRET = secret.trim();
+
+            const token = document.getElementById('qbRefreshToken').value;
+            if (token && token !== '********') payload.QB_REFRESH_TOKEN = token.trim();
+
+            try {
+                const res = await fetch('/api/qb-credentials', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                if (res.ok) {
+                    feedback.classList.remove('hidden');
+                    setTimeout(() => feedback.classList.add('hidden'), 3000);
+                    if (typeof showToast === 'function') showToast('Credentials updated successfully', 'success');
+                    // Reload to show masked values
+                    await loadQBCredentials();
+                } else {
+                    const errData = await res.json();
+                    if (typeof showToast === 'function') showToast(errData.error || 'Failed to save credentials', 'error');
+                    else alert(errData.error || 'Failed to save credentials');
+                }
+            } catch (err) {
+                if (typeof showToast === 'function') showToast('Network error while saving credentials', 'error');
+                else alert('Network error while saving credentials');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = origHTML;
+                lucide.createIcons();
+            }
+        }
+
+        function togglePassword(id) {
+            const input = document.getElementById(id);
+            const btn = input.nextElementSibling;
+            if (input.type === 'password') {
+                input.type = 'text';
+                btn.innerHTML = '<i data-lucide="eye-off" class="w-4 h-4"></i>';
+            } else {
+                input.type = 'password';
+                btn.innerHTML = '<i data-lucide="eye" class="w-4 h-4"></i>';
+            }
+            lucide.createIcons();
         }
     </script>
     <!-- Local Admin Settings Modal -->

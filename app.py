@@ -551,6 +551,11 @@ def api_status():
     if job and job.next_run_time:
         next_run = job.next_run_time.strftime("%Y-%m-%d %H:%M:%S")
 
+    # Check QB connectivity briefly
+    qb_connected = False
+    if os.getenv("QB_REFRESH_TOKEN") and os.getenv("QB_CLIENT_ID"):
+        qb_connected = True
+
     return jsonify({
         "status": status_data,
         "logs": log_basenames,
@@ -558,6 +563,7 @@ def api_status():
         "next_run": next_run,
         "recipient_email": os.getenv("SMTP_RECIPIENT_EMAIL", ""),
         "pco_list_id": os.getenv("PCO_LIST_ID", "2552744"),
+        "qb_connected": qb_connected,
         "display_name_format": load_config().get('planning_center', {}).get('display_name_format', '{first_name} {last_name}')
     })
 
@@ -590,6 +596,31 @@ def api_sync_now():
     except Exception as e:
         logging.error(f"Failed to start sync: {e}")
         return jsonify({"error": str(e)}), 500
+
+@app.route('/api/qb-credentials', methods=['GET', 'POST'])
+@login_required
+def api_qb_credentials():
+    """Get or set QuickBooks credentials in the .env file."""
+    if request.method == 'POST':
+        try:
+            data = request.get_json()
+            keys = ['QB_CLIENT_ID', 'QB_CLIENT_SECRET', 'QB_REFRESH_TOKEN', 'QB_REALM_ID', 'QB_ENVIRONMENT']
+            for key in keys:
+                if key in data and data[key]:
+                    update_env_file(key, data[key])
+            return jsonify({"status": "Success"})
+        except Exception as e:
+            logging.error(f"Failed to save QB credentials: {e}")
+            return jsonify({"error": str(e)}), 500
+    
+    # GET: Return masked credentials
+    return jsonify({
+        "QB_CLIENT_ID": os.getenv("QB_CLIENT_ID", ""),
+        "QB_CLIENT_SECRET": "********" if os.getenv("QB_CLIENT_SECRET") else "",
+        "QB_REFRESH_TOKEN": "********" if os.getenv("QB_REFRESH_TOKEN") else "",
+        "QB_REALM_ID": os.getenv("QB_REALM_ID", ""),
+        "QB_ENVIRONMENT": os.getenv("QB_ENVIRONMENT", "sandbox")
+    })
 
 @app.route('/api/member-sync-settings', methods=['POST'])
 @login_required
