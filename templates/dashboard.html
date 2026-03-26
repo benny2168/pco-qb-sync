@@ -70,9 +70,9 @@
 <body class="min-h-screen py-8 px-4 sm:px-6 lg:px-8 font-sans antialiased">
     <div class="max-w-7xl mx-auto space-y-8">
         <!-- Header -->
-        <header class="grid grid-cols-[1fr_auto] gap-x-2 sm:gap-x-4 items-start">
-            <div class="space-y-1 sm:space-y-2">
-                <h1 class="text-xl sm:text-3xl font-bold tracking-tight flex flex-col items-start gap-1 sm:gap-2">
+        <header class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div class="space-y-1 sm:space-y-2 order-2 sm:order-1">
+                <h1 class="text-xl sm:text-3xl font-bold tracking-tight flex flex-col sm:flex-row items-start sm:items-center gap-1 sm:gap-2">
                     <img src="/static/logos/pco-logo.svg?v=2" class="h-6 sm:h-10 w-auto" alt="PCO">
                     <div class="flex items-center gap-1.5 sm:gap-2">
                         <span class="gradient-text text-2xl sm:text-4xl font-bold relative -top-[2px] sm:-top-[6px]">↔</span>
@@ -85,7 +85,7 @@
                 </p>
             </div>
             
-            <div class="flex flex-col items-end gap-2 sm:gap-3">
+            <div class="flex flex-col items-end gap-2 sm:gap-3 order-1 sm:order-2">
                 <!-- User Profile -->
                 <div id="userProfile" class="hidden glass-card rounded-full pl-1.5 pr-3 sm:pl-2 sm:pr-4 py-1 sm:py-1.5 flex items-center gap-2 sm:gap-3">
                     <div class="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-indigo-500/20 flex items-center justify-center text-indigo-400 font-bold text-[10px] sm:text-xs" id="userInitial">?</div>
