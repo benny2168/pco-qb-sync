@@ -598,7 +598,10 @@ def qb_auth():
     auth_url = "https://appcenter.intuit.com/connect/oauth2"
     
     # Construct redirect URI
-    if REDIRECT_URI_OVERRIDE:
+    qb_override = os.getenv('QB_REDIRECT_URI')
+    if qb_override:
+        redirect_uri = qb_override
+    elif REDIRECT_URI_OVERRIDE:
         # If we have a global override, use it but swap the path
         base = REDIRECT_URI_OVERRIDE.split(REDIRECT_PATH)[0].rstrip('/')
         redirect_uri = f"{base}/qb-callback"
@@ -636,7 +639,10 @@ def qb_callback():
     client_secret = os.getenv('QB_CLIENT_SECRET')
     
     # Construct redirect URI (must match the one used in /qb-auth)
-    if REDIRECT_URI_OVERRIDE:
+    qb_override = os.getenv('QB_REDIRECT_URI')
+    if qb_override:
+        redirect_uri = qb_override
+    elif REDIRECT_URI_OVERRIDE:
         base = REDIRECT_URI_OVERRIDE.split(REDIRECT_PATH)[0].rstrip('/')
         redirect_uri = f"{base}/qb-callback"
     else:
