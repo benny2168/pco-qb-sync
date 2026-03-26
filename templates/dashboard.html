@@ -70,12 +70,12 @@
 <body class="min-h-screen py-8 px-4 sm:px-6 lg:px-8 font-sans antialiased">
     <div class="max-w-7xl mx-auto space-y-8">
         <!-- Header -->
-        <header class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-            <div>
-                <h1 class="text-3xl font-bold tracking-tight flex items-center gap-2">
-                    <img src="/static/logos/pco-logo.svg?v=2" class="h-10 w-auto" alt="PCO">
-                    <span class="gradient-text text-4xl font-bold relative -top-[6px]">↔</span>
-                    <img src="/static/logos/qb-logo.svg?v=2" class="h-10 w-auto" alt="QuickBooks">
+        <header class="flex flex-col sm:flex-row justify-between items-start gap-4">
+            <div class="w-full sm:w-auto order-2 sm:order-1">
+                <h1 class="text-2xl sm:text-3xl font-bold tracking-tight flex flex-wrap items-center gap-2">
+                    <img src="/static/logos/pco-logo.svg?v=2" class="h-7 sm:h-10 w-auto" alt="PCO">
+                    <span class="gradient-text text-3xl sm:text-4xl font-bold relative -top-[4px] sm:-top-[6px]">↔</span>
+                    <img src="/static/logos/qb-logo.svg?v=2" class="h-7 sm:h-10 w-auto" alt="QuickBooks">
                     <span class="gradient-text">Sync</span>
                 </h1>
                 <p class="text-slate-400 mt-1 flex items-center gap-2 text-sm">
@@ -83,19 +83,7 @@
                 </p>
             </div>
             
-            <div class="flex flex-col items-end gap-2.5">
-                <!-- Global Sync Status -->
-                <div class="flex flex-col gap-2 pr-1">
-                    <div class="flex items-center justify-end gap-2.5">
-                        <span id="statusText" class="text-[11px] font-bold text-slate-500 uppercase tracking-wider leading-none transition-colors duration-500">Member Sync: Loading...</span>
-                        <div id="statusIndicator" class="w-1.5 h-1.5 rounded-full bg-slate-600 transition-all duration-500"></div>
-                    </div>
-                    <div class="flex items-center justify-end gap-2.5">
-                        <span id="donStatusText" class="text-[11px] font-bold text-slate-500 uppercase tracking-wider leading-none transition-colors duration-500">Donation Sync: Idle</span>
-                        <div id="donStatusDot" class="w-1.5 h-1.5 rounded-full bg-slate-600 transition-all duration-500"></div>
-                    </div>
-                </div>
-
+            <div class="w-full sm:w-auto order-1 sm:order-2 flex flex-col items-end gap-2.5">
                 <!-- User Profile -->
                 <div id="userProfile" class="hidden glass-card rounded-full pl-2 pr-4 py-1.5 flex items-center gap-3">
                     <div class="w-8 h-8 rounded-full bg-indigo-500/20 flex items-center justify-center text-indigo-400 font-bold text-xs" id="userInitial">?</div>
@@ -114,6 +102,18 @@
                     <a href="/logout" class="ml-1 p-1.5 rounded-lg hover:bg-red-500/10 text-slate-500 hover:text-red-400 transition-colors" title="Logout">
                         <i data-lucide="log-out" class="w-4 h-4"></i>
                     </a>
+                </div>
+
+                <!-- Global Sync Status -->
+                <div class="flex flex-col gap-2 pr-1">
+                    <div class="flex items-center justify-end gap-2.5">
+                        <span id="statusText" class="text-[11px] font-bold text-slate-500 uppercase tracking-wider leading-none transition-colors duration-500">Member Sync: Loading...</span>
+                        <div id="statusIndicator" class="w-1.5 h-1.5 rounded-full bg-slate-600 transition-all duration-500"></div>
+                    </div>
+                    <div class="flex items-center justify-end gap-2.5">
+                        <span id="donStatusText" class="text-[11px] font-bold text-slate-500 uppercase tracking-wider leading-none transition-colors duration-500">Donation Sync: Idle</span>
+                        <div id="donStatusDot" class="w-1.5 h-1.5 rounded-full bg-slate-600 transition-all duration-500"></div>
+                    </div>
                 </div>
             </div>
         </header>
