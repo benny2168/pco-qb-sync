@@ -567,8 +567,8 @@ def logout():
     session.clear()
     
     if not is_sso:
-        logging.info("Local logout path taken. Redirecting to login.")
-        return redirect(url_for('login'))
+        logging.info("Local logout path taken. Redirecting to local-login.")
+        return redirect(url_for('local_login'))
     
     # SSO logout Path
     logging.info("Global SSO logout path taken.")

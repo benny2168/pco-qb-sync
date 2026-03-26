@@ -904,7 +904,7 @@
                             </div>
                             <i data-lucide="chevron-down" class="w-5 h-5 text-slate-500 rotate-icon" id="icon-card-login-history"></i>
                         </button>
-                        <div id="card-login-history" class="collapsible-content px-6 pb-6 hidden">
+                        <div id="card-login-history" class="collapsible-content px-6 pb-6">
                             <div class="overflow-x-auto">
                                 <table class="w-full text-left">
                                     <thead>
@@ -2357,7 +2357,10 @@
                     return;
                 }
 
-                tbody.innerHTML = logs.map(log => `
+                console.log('Starting render of', logs.length, 'logs');
+                tbody.innerHTML = logs.map(log => {
+                    console.log('Mapping log:', log.username);
+                    return `
                     <tr class="hover:bg-white/5 transition-colors">
                         <td class="px-2 py-3">
                             <div class="text-xs font-medium text-slate-200">${log.username}</div>
@@ -2374,7 +2377,8 @@
                             </span>
                         </td>
                     </tr>
-                `).join('');
+                `}).join('');
+                console.log('HTML set successfully');
                 lucide.createIcons();
             } catch (err) {
                 console.error('Failed to load admin logins:', err);
