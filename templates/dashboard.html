@@ -2345,8 +2345,10 @@
             try {
                 const resp = await fetch('/api/admin-logins');
                 const logs = await resp.json();
+                console.log('Admin Logins Response:', logs);
                 
                 if (!Array.isArray(logs)) {
+                    console.warn('Admin logins fetched but not an array:', logs);
                     throw new Error(logs.error || 'Invalid log data received');
                 }
 
