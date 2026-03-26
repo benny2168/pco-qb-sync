@@ -37,8 +37,9 @@ if not os.path.isfile(ENV_PATH):
     fallback_path = os.path.join(BASE_DIR, '.env')
     if os.path.isfile(fallback_path):
         ENV_PATH = fallback_path
-    
+
 load_dotenv(dotenv_path=ENV_PATH, override=True)
+logging.info(f"Loaded environment from: {ENV_PATH}")
 
 AUTH_SETTINGS_PATH = os.path.join(BASE_DIR, 'data', 'auth_settings.json')
 
@@ -85,7 +86,8 @@ def read_json_with_retries(path, retries=5, delay=0.1):
     return None
 
 def save_json_with_retries(path, data, retries=5, delay=0.1):
-    """Attempt to save a JSON file atomically with retries to handle transient file lock/deadlock errors."""
+    """Attempt to save a JSON file atomically with retries. 
+    Falls back to direct write if 'Device or resource busy' (Docker volume issues)."""
     for i in range(retries):
         try:
             temp_path = f"{path}.tmp"
@@ -101,9 +103,15 @@ def save_json_with_retries(path, data, retries=5, delay=0.1):
                 if i < retries - 1:
                     time.sleep(delay)
                     continue
+            elif e.errno == 16: # Device or resource busy (Docker mount rename across boundaries)
+                logging.warning(f"Atomic rename failed (errno 16). Falling back to direct write for {path}.")
+                try:
+                    with open(path, 'w', encoding='utf-8') as f:
+                        json.dump(data, f, indent=4)
+                    return True
+                except Exception as ex:
+                    logging.error(f"Fallback write also failed: {ex}")
             raise
-    return False
-
     return False
 
 def update_env_file(key, value):
@@ -602,7 +610,12 @@ def api_save_member_settings():
         # 4. Update Display Name Format
         fmt = data.get('display_name_format', '').strip()
         if fmt:
-            config = load_config()
+            # Re-locate config path correctly
+            config_path = os.path.join(BASE_DIR, 'config', 'config.json')
+            if not os.path.exists(config_path):
+                config_path = os.path.join(BASE_DIR, 'config.json')
+            
+            config = load_config(config_path)
             if 'planning_center' not in config:
                 config['planning_center'] = {}
             config['planning_center']['display_name_format'] = fmt

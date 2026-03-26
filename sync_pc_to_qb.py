@@ -12,11 +12,14 @@ from typing import List, Dict, Any, Optional
 from dotenv import load_dotenv
 
 # Load environment variables from .env file (priority: config/.env)
-dotenv_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'config', '.env')
-if os.path.exists(dotenv_path):
-    load_dotenv(dotenv_path=dotenv_path, override=True)
-else:
-    load_dotenv()
+BASE_DIR = os.path.dirname(os.path.realpath(__file__))
+ENV_PATH = os.path.join(BASE_DIR, 'config', '.env')
+if not os.path.isfile(ENV_PATH):
+    fallback_path = os.path.join(BASE_DIR, '.env')
+    if os.path.isfile(fallback_path):
+        ENV_PATH = fallback_path
+
+load_dotenv(dotenv_path=ENV_PATH, override=True)
 
 # Load configuration
 def load_config(config_path: Optional[str] = None) -> Dict[str, Any]:
