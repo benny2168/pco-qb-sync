@@ -1,21 +1,26 @@
+# Use modern Python base image
 FROM python:3.11-slim
+
+# Set environment variables
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
 
 WORKDIR /app
 
-# Install dependencies first (for Docker layer caching)
+# Install system dependencies if any (none needed currently)
+# RUN apt-get update && apt-get install -y --no-install-recommends ... && rm -rf /var/lib/apt/lists/*
+
+# Install Python dependencies first (for layer caching)
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy application code
-COPY app.py .
-COPY sync_pc_to_qb.py .
-COPY sync_donations_qb_to_pc.py .
-COPY templates templates
-COPY static static
+# Copy everything else (using .dockerignore for exclusions)
+COPY . .
 
-# Create necessary directories
+# Ensure necessary directories exist for volume mounting
 RUN mkdir -p /app/config /app/data /app/logs
 
 EXPOSE 8080
 
+# Use a slightly more robust startup command if needed
 CMD ["python", "app.py"]

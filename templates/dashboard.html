@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en" class="dark">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -33,11 +34,12 @@
         body {
             background-color: #0f172a;
             color: #f8fafc;
-            background-image: 
+            background-image:
                 radial-gradient(circle at 15% 50%, rgba(99, 102, 241, 0.15) 0%, transparent 50%),
                 radial-gradient(circle at 85% 30%, rgba(236, 72, 153, 0.15) 0%, transparent 50%);
             background-attachment: fixed;
         }
+
         .glass-card {
             background: rgba(30, 41, 59, 0.7);
             backdrop-filter: blur(12px);
@@ -46,36 +48,137 @@
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
             transition: transform 0.2s ease, box-shadow 0.2s ease;
         }
+
         .gradient-text {
             background: linear-gradient(135deg, #a855f7 0%, #ec4899 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
         }
-        
+
         /* Custom Scrollbar */
-        ::-webkit-scrollbar { width: 8px; height: 8px; }
-        ::-webkit-scrollbar-track { background: rgba(15, 23, 42, 0.5); border-radius: 4px; }
-        ::-webkit-scrollbar-thumb { background: rgba(148, 163, 184, 0.3); border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: rgba(148, 163, 184, 0.5); }
-        
-        .pulse-indicator { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
-        
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.5);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(148, 163, 184, 0.3);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(148, 163, 184, 0.5);
+        }
+
+        .pulse-indicator {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+
         @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: .5; }
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: .5;
+            }
+        }
+        .toast-container {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            pointer-events: none;
+        }
+
+        .toast {
+            pointer-events: auto;
+            min-width: 300px;
+            max-width: 450px;
+            padding: 1rem 1.25rem;
+            border-radius: 1rem;
+            background: rgba(30, 41, 59, 0.95);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: white;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.2);
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            animation: toast-in 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        @keyframes toast-in {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        .toast.toast-out {
+            animation: toast-out 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        @keyframes toast-out {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+
+            to {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+        }
+        .collapsible-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out, opacity 0.3s ease;
+            opacity: 0;
+        }
+
+        .collapsible-content.expanded {
+            max-height: 2000px;
+            opacity: 1;
+        }
+
+        .rotate-icon {
+            transition: transform 0.3s ease;
+        }
+
+        .rotate-icon.expanded {
+            transform: rotate(180deg);
         }
     </style>
 </head>
+
 <body class="min-h-screen py-8 px-4 sm:px-6 lg:px-8 font-sans antialiased">
     <div class="max-w-7xl mx-auto space-y-8">
         <!-- Header -->
         <header class="grid grid-cols-[1fr_auto] gap-x-3 sm:gap-x-8 items-start sm:items-center">
             <div class="space-y-1 sm:space-y-2">
-                <h1 class="text-xl sm:text-3xl font-bold tracking-tight flex flex-col sm:flex-row items-start sm:items-center gap-1 sm:gap-2">
+                <h1
+                    class="text-xl sm:text-3xl font-bold tracking-tight flex flex-col sm:flex-row items-start sm:items-center gap-1 sm:gap-2">
                     <img src="/static/logos/pco-logo.svg?v=2" class="h-6 sm:h-10 w-auto" alt="PCO">
                     <div class="flex items-center gap-1 sm:gap-2">
-                        <span class="gradient-text text-2xl sm:text-4xl font-bold relative -top-[2px] sm:-top-[6px]">↔</span>
+                        <span
+                            class="gradient-text text-2xl sm:text-4xl font-bold relative -top-[2px] sm:-top-[6px]">↔</span>
                         <img src="/static/logos/qb-logo.svg?v=2" class="h-6 sm:h-10 w-auto" alt="QuickBooks">
                         <span class="gradient-text">Sync</span>
                     </div>
@@ -84,24 +187,24 @@
                     <i data-lucide="activity" class="w-3.5 h-3.5 sm:w-4 sm:h-4"></i> Dashboard & Logging
                 </p>
             </div>
-            
+
             <div class="flex flex-col items-end gap-2 sm:gap-3">
                 <!-- User Profile -->
-                <div id="userProfile" class="hidden glass-card rounded-full pl-1.5 pr-3 sm:pl-2 sm:pr-4 py-1 sm:py-1.5 flex items-center gap-2 sm:gap-3">
-                    <div class="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-indigo-500/20 flex items-center justify-center text-indigo-400 font-bold text-[10px] sm:text-xs" id="userInitial">?</div>
+                <div id="userProfile"
+                    class="hidden glass-card rounded-full pl-1.5 pr-3 sm:pl-2 sm:pr-4 py-1 sm:py-1.5 flex items-center gap-2 sm:gap-3">
+                    <div class="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-indigo-500/20 flex items-center justify-center text-indigo-400 font-bold text-[10px] sm:text-xs"
+                        id="userInitial">?</div>
                     <div class="flex flex-col">
-                        <span id="userName" class="text-[10px] sm:text-xs font-semibold text-slate-200 leading-tight">User</span>
-                        <span id="userEmail" class="text-[8px] sm:text-[10px] text-slate-500 leading-tight">email@example.com</span>
-                    </div>
-                    
-                    <!-- Local Admin Settings (SSO only) -->
-                    <div id="localSettingsTrigger" class="hidden flex items-center">
-                        <button onclick="openLocalSettings()" class="ml-0.5 sm:ml-1 p-1 sm:p-1.5 rounded-lg hover:bg-amber-500/10 text-slate-500 hover:text-amber-400 transition-colors" title="Local Admin Settings">
-                            <i data-lucide="settings-2" class="w-3.5 h-3.5 sm:w-4 sm:h-4"></i>
-                        </button>
+                        <span id="userName"
+                            class="text-[10px] sm:text-xs font-semibold text-slate-200 leading-tight">User</span>
+                        <span id="userEmail"
+                            class="text-[8px] sm:text-[10px] text-slate-500 leading-tight">email@example.com</span>
                     </div>
 
-                    <a href="/logout" class="ml-0.5 sm:ml-1 p-1 sm:p-1.5 rounded-lg hover:bg-red-500/10 text-slate-500 hover:text-red-400 transition-colors" title="Logout">
+
+                    <a href="/logout"
+                        class="ml-0.5 sm:ml-1 p-1 sm:p-1.5 rounded-lg hover:bg-red-500/10 text-slate-500 hover:text-red-400 transition-colors"
+                        title="Logout">
                         <i data-lucide="log-out" class="w-3.5 h-3.5 sm:w-4 sm:h-4"></i>
                     </a>
                 </div>
@@ -109,12 +212,18 @@
                 <!-- Global Sync Status -->
                 <div class="flex flex-col gap-1.5 sm:gap-2 pr-1">
                     <div class="flex items-center justify-end gap-2 sm:gap-2.5">
-                        <span id="statusText" class="text-[9px] sm:text-[11px] font-bold text-slate-500 uppercase tracking-wider leading-none transition-colors duration-500">Member Sync: Loading...</span>
-                        <div id="statusIndicator" class="w-1.5 h-1.5 rounded-full bg-slate-600 transition-all duration-500"></div>
+                        <span id="statusText"
+                            class="text-[9px] sm:text-[11px] font-bold text-slate-500 uppercase tracking-wider leading-none transition-colors duration-500">Member
+                            Sync: Loading...</span>
+                        <div id="statusIndicator"
+                            class="w-1.5 h-1.5 rounded-full bg-slate-600 transition-all duration-500"></div>
                     </div>
                     <div class="flex items-center justify-end gap-2 sm:gap-2.5">
-                        <span id="donStatusText" class="text-[9px] sm:text-[11px] font-bold text-slate-500 uppercase tracking-wider leading-none transition-colors duration-500">Donation Sync: Idle</span>
-                        <div id="donStatusDot" class="w-1.5 h-1.5 rounded-full bg-slate-600 transition-all duration-500"></div>
+                        <span id="donStatusText"
+                            class="text-[9px] sm:text-[11px] font-bold text-slate-500 uppercase tracking-wider leading-none transition-colors duration-500">Donation
+                            Sync: Idle</span>
+                        <div id="donStatusDot"
+                            class="w-1.5 h-1.5 rounded-full bg-slate-600 transition-all duration-500"></div>
                     </div>
                 </div>
             </div>
@@ -122,16 +231,20 @@
 
         <!-- Tab Bar -->
         <div class="mt-6 flex gap-1 bg-slate-800/30 rounded-xl p-1 w-fit">
-            <button onclick="switchTab('sync')" id="tab-sync" class="tab-btn px-5 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 bg-indigo-600/20 text-indigo-300">
+            <button onclick="switchTab('sync')" id="tab-sync"
+                class="tab-btn px-5 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 bg-indigo-600/20 text-indigo-300">
                 <i data-lucide="users" class="w-4 h-4"></i> Member Sync
             </button>
-            <button onclick="switchTab('donations')" id="tab-donations" class="tab-btn px-5 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 text-slate-400 hover:text-slate-200">
+            <button onclick="switchTab('donations')" id="tab-donations"
+                class="tab-btn px-5 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 text-slate-400 hover:text-slate-200">
                 <i data-lucide="banknote" class="w-4 h-4"></i> Donation Sync
             </button>
-            <button onclick="switchTab('members')" id="tab-members" class="tab-btn px-5 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 text-slate-400 hover:text-slate-200">
+            <button onclick="switchTab('members')" id="tab-members"
+                class="tab-btn px-5 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 text-slate-400 hover:text-slate-200">
                 <i data-lucide="history" class="w-4 h-4"></i> Member History
             </button>
-            <button onclick="switchTab('settings')" id="tab-settings" class="tab-btn px-5 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 text-slate-400 hover:text-slate-200">
+            <button onclick="switchTab('settings')" id="tab-settings"
+                class="tab-btn px-5 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 text-slate-400 hover:text-slate-200">
                 <i data-lucide="settings" class="w-4 h-4"></i> System Settings
             </button>
         </div>
@@ -144,474 +257,662 @@
                     Member Info Sync (PCO People → QB)
                 </h2>
 
-        <!-- Metrics Row -->
-        <main class="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <!-- Sync Control -->
-            <div class="glass-card rounded-2xl p-6 flex flex-col justify-start gap-4">
-                <h3 class="text-xs font-semibold tracking-wider text-slate-400 uppercase">Controls</h3>
-                <button id="syncNowBtn" class="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-medium transition-all shadow-lg shadow-indigo-900/30 hover:shadow-indigo-800/40 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed">
-                    <i data-lucide="play" class="w-4 h-4" id="syncNowIcon"></i>
-                    <span id="syncNowText">Run Member Sync</span>
-                </button>
-            </div>
-
-            <div class="glass-card rounded-2xl p-6 flex flex-col justify-between">
-                <div>
-                    <h3 class="text-xs font-semibold tracking-wider text-slate-400 mb-4 uppercase">Last Sync</h3>
-                    <div class="grid grid-cols-2 gap-y-3 text-sm mb-4">
-                        <p class="text-slate-500">Started</p>
-                        <p id="startTime" class="font-medium text-slate-200 text-right">--</p>
-                        <p class="text-slate-500">Duration</p>
-                        <p id="durationTime" class="font-medium text-indigo-400 text-right">--</p>
+                <!-- Metrics Row -->
+                <main class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <!-- Sync Control -->
+                    <div class="glass-card rounded-2xl p-6 flex flex-col justify-start gap-4">
+                        <h3 class="text-xs font-semibold tracking-wider text-slate-400 uppercase">Controls</h3>
+                        <button id="syncNowBtn"
+                            class="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-medium transition-all shadow-lg shadow-indigo-900/30 hover:shadow-indigo-800/40 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed">
+                            <i data-lucide="play" class="w-4 h-4" id="syncNowIcon"></i>
+                            <span id="syncNowText">Run Member Sync</span>
+                        </button>
                     </div>
-                </div>
-                <div class="border-t border-slate-800/50 pt-4">
-                    <h3 class="text-xs font-semibold tracking-wider text-slate-400 mb-2 uppercase">Next Sync</h3>
-                    <div class="grid grid-cols-2 text-sm">
-                        <p class="text-slate-500">Scheduled for</p>
-                        <p id="nextSyncTime" class="font-medium text-slate-200 text-right">--</p>
-                    </div>
-                </div>
-            </div>
 
-            <div class="glass-card rounded-2xl p-6 flex items-center justify-around text-center">
-                <div class="flex-1">
-                    <i data-lucide="user-plus" class="w-6 h-6 text-green-400 mx-auto mb-2"></i>
-                    <p class="text-3xl font-bold text-slate-100" id="statCreated">-</p>
-                    <p class="text-[10px] text-slate-500 uppercase mt-1 font-semibold tracking-tight">Created</p>
-                </div>
-                <div class="w-px h-12 bg-slate-700/50"></div>
-                <div class="flex-1">
-                    <i data-lucide="refresh-cw" class="w-6 h-6 text-blue-400 mx-auto mb-2"></i>
-                    <p class="text-3xl font-bold text-slate-100" id="statUpdated">-</p>
-                    <p class="text-[10px] text-slate-500 uppercase mt-1 font-semibold tracking-tight">Updated</p>
-                </div>
-                <div class="w-px h-12 bg-slate-700/50"></div>
-                <div class="flex-1">
-                    <i data-lucide="alert-triangle" class="w-6 h-6 text-red-500 mx-auto mb-2"></i>
-                    <p class="text-3xl font-bold text-slate-100" id="statErrors">-</p>
-                    <p class="text-[10px] text-slate-500 uppercase mt-1 font-semibold tracking-tight">Errors</p>
-                </div>
-            </div>
-        </main>
-
-        <!-- Member Sync Configuration Card -->
-        <div class="glass-card rounded-2xl p-8 mt-8">
-            <div class="flex items-center justify-between mb-6">
-                <h3 class="text-base font-semibold text-slate-200 flex items-center gap-2">
-                    <i data-lucide="settings" class="w-5 h-5 text-indigo-400"></i>
-                    Member Sync Configuration
-                </h3>
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <!-- Schedule & Email -->
-                <div class="space-y-6">
-                    <div>
-                        <label class="block text-xs font-medium text-slate-400 mb-3 uppercase tracking-wider">Sync Frequency</label>
-                        <div class="flex items-center gap-2 bg-slate-900/50 p-3 rounded-xl border border-slate-800/50">
-                            <i data-lucide="calendar-clock" class="w-4 h-4 text-indigo-400"></i>
-                            <div class="flex-1 flex items-center gap-2 flex-wrap">
-                                <select id="schedFrequency" class="bg-slate-800 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 transition-colors">
-                                    <option value="daily">Daily</option>
-                                    <option value="weekly">Weekly</option>
-                                    <option value="monthly">Monthly</option>
-                                </select>
-                                <select id="schedDay" class="bg-slate-800 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 transition-colors hidden"></select>
-                                <span class="text-slate-500 text-xs text-center min-w-[12px]">@</span>
-                                <select id="schedHour" class="bg-slate-800 border border-slate-700 rounded-lg px-4 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 transition-colors"></select>
+                    <div class="glass-card rounded-2xl p-6 flex flex-col justify-between">
+                        <div>
+                            <h3 class="text-xs font-semibold tracking-wider text-slate-400 mb-4 uppercase">Last Sync
+                            </h3>
+                            <div class="grid grid-cols-2 gap-y-3 text-sm mb-4">
+                                <p class="text-slate-500">Started</p>
+                                <p id="startTime" class="font-medium text-slate-200 text-right">--</p>
+                                <p class="text-slate-500">Duration</p>
+                                <p id="durationTime" class="font-medium text-indigo-400 text-right">--</p>
+                            </div>
+                        </div>
+                        <div class="border-t border-slate-800/50 pt-4">
+                            <h3 class="text-xs font-semibold tracking-wider text-slate-400 mb-2 uppercase">Next Sync
+                            </h3>
+                            <div class="grid grid-cols-2 text-sm">
+                                <p class="text-slate-500">Scheduled for</p>
+                                <p id="nextSyncTime" class="font-medium text-slate-200 text-right">--</p>
                             </div>
                         </div>
                     </div>
 
-                    <div>
-                        <label class="block text-xs font-medium text-slate-400 mb-3 uppercase tracking-wider">Notification Email</label>
-                        <div class="relative flex items-center group">
-                            <i data-lucide="mail" class="w-4 h-4 text-indigo-400 absolute left-4"></i>
-                            <input type="email" id="emailInput" placeholder="recipient@example.com" class="w-full bg-slate-900/50 border border-slate-800/50 rounded-xl pl-11 pr-4 py-3 text-sm text-slate-200 focus:outline-none focus:border-indigo-500 transition-all group-hover:border-slate-700">
-                        </div>
-                    </div>
-
-                    <div>
-                        <label class="block text-xs font-medium text-slate-400 mb-3 uppercase tracking-wider">PCO Sync List ID</label>
-                        <div class="relative flex items-center group">
-                            <i data-lucide="list" class="w-4 h-4 text-indigo-400 absolute left-4"></i>
-                            <input type="text" id="pcoListIdInput" placeholder="4661587" class="w-full bg-slate-900/50 border border-slate-800/50 rounded-xl pl-11 pr-4 py-3 text-sm text-slate-200 focus:outline-none focus:border-indigo-500 transition-all group-hover:border-slate-700">
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Display Name Format -->
-                <div class="space-y-4">
-                    <label class="block text-xs font-medium text-slate-400 uppercase tracking-wider">Display Name Format Builder</label>
-                    <div class="flex flex-wrap gap-2">
-                        <button onclick="insertFieldCode('{first_name}')" class="px-2.5 py-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-[10px] text-slate-300 border border-slate-700 transition-all">First Name</button>
-                        <button onclick="insertFieldCode('{middle_name}')" class="px-2.5 py-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-[10px] text-slate-300 border border-slate-700 transition-all">Middle Name</button>
-                        <button onclick="insertFieldCode('{last_name}')" class="px-2.5 py-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-[10px] text-slate-300 border border-slate-700 transition-all">Last Name</button>
-                        <button onclick="insertFieldCode('{nickname}')" class="px-2.5 py-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-[10px] text-slate-300 border border-slate-700 transition-all">Nickname</button>
-                        <button onclick="insertFieldCode('{prayer_group}')" class="px-2.5 py-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-[10px] text-slate-300 border border-slate-700 transition-all">Prayer Group</button>
-                    </div>
-                    <div class="relative flex items-center group">
-                        <i data-lucide="type" class="w-4 h-4 text-indigo-400 absolute left-4"></i>
-                        <input type="text" id="displayNameFormatInput" placeholder="{first_name} {last_name}" class="w-full bg-slate-900/50 border border-slate-800/50 rounded-xl pl-11 pr-4 py-3 text-sm text-slate-200 focus:outline-none focus:border-indigo-500 transition-all font-mono group-hover:border-slate-700">
-                    </div>
-                    <div class="flex flex-col gap-2 px-1">
-                        <p class="text-[10px] text-slate-500 leading-relaxed">
-                            <span class="text-indigo-400 font-semibold italic">Tip:</span> Use <code class="bg-slate-800 px-1 rounded text-indigo-300">[ ]</code> for conditional blocks. 
-                            Content inside brackets only displays if the field is not empty. 
-                            Example: <code class="bg-slate-800 px-1 rounded text-indigo-300">["{nickname}"]</code>
-                        </p>
-                        <div class="flex items-center justify-between">
-                            <p class="text-[10px] text-slate-500 flex items-center gap-1.5">
-                                <span class="font-bold uppercase tracking-widest text-[9px]">Preview:</span> 
-                                <span id="displayNamePreview" class="text-indigo-400 font-medium italic">John Smith</span>
+                    <div class="glass-card rounded-2xl p-6 flex items-center justify-around text-center">
+                        <div class="flex-1">
+                            <i data-lucide="user-plus" class="w-6 h-6 text-green-400 mx-auto mb-2"></i>
+                            <p class="text-3xl font-bold text-slate-100" id="statCreated">-</p>
+                            <p class="text-[10px] text-slate-500 uppercase mt-1 font-semibold tracking-tight">Created
                             </p>
                         </div>
+                        <div class="w-px h-12 bg-slate-700/50"></div>
+                        <div class="flex-1">
+                            <i data-lucide="refresh-cw" class="w-6 h-6 text-blue-400 mx-auto mb-2"></i>
+                            <p class="text-3xl font-bold text-slate-100" id="statUpdated">-</p>
+                            <p class="text-[10px] text-slate-500 uppercase mt-1 font-semibold tracking-tight">Updated
+                            </p>
+                        </div>
+                        <div class="w-px h-12 bg-slate-700/50"></div>
+                        <div class="flex-1">
+                            <i data-lucide="alert-triangle" class="w-6 h-6 text-red-500 mx-auto mb-2"></i>
+                            <p class="text-3xl font-bold text-slate-100" id="statErrors">-</p>
+                            <p class="text-[10px] text-slate-500 uppercase mt-1 font-semibold tracking-tight">Errors</p>
+                        </div>
+                    </div>
+                </main>
+
+                <!-- Member Sync Configuration Card -->
+                <div class="glass-card rounded-2xl p-8 mt-8">
+                    <div class="flex items-center justify-between mb-6">
+                        <h3 class="text-base font-semibold text-slate-200 flex items-center gap-2">
+                            <i data-lucide="settings" class="w-5 h-5 text-indigo-400"></i>
+                            Member Sync Configuration
+                        </h3>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <!-- Schedule & Email -->
+                        <div class="space-y-6">
+                            <div>
+                                <label
+                                    class="block text-xs font-medium text-slate-400 mb-3 uppercase tracking-wider">Sync
+                                    Frequency</label>
+                                <div
+                                    class="flex items-center gap-2 bg-slate-900/50 p-3 rounded-xl border border-slate-800/50">
+                                    <i data-lucide="calendar-clock" class="w-4 h-4 text-indigo-400"></i>
+                                    <div class="flex-1 flex items-center gap-2 flex-wrap">
+                                        <select id="schedFrequency"
+                                            class="bg-slate-800 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 transition-colors">
+                                            <option value="daily">Daily</option>
+                                            <option value="weekly">Weekly</option>
+                                            <option value="monthly">Monthly</option>
+                                        </select>
+                                        <select id="schedDay"
+                                            class="bg-slate-800 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 transition-colors hidden"></select>
+                                        <span class="text-slate-500 text-xs text-center min-w-[12px]">@</span>
+                                        <select id="schedHour"
+                                            class="bg-slate-800 border border-slate-700 rounded-lg px-4 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 transition-colors"></select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label
+                                    class="block text-xs font-medium text-slate-400 mb-3 uppercase tracking-wider">Notification
+                                    Email</label>
+                                <div class="relative flex items-center group">
+                                    <i data-lucide="mail" class="w-4 h-4 text-indigo-400 absolute left-4"></i>
+                                    <input type="email" id="emailInput" placeholder="recipient@example.com"
+                                        class="w-full bg-slate-900/50 border border-slate-800/50 rounded-xl pl-11 pr-4 py-3 text-sm text-slate-200 focus:outline-none focus:border-indigo-500 transition-all group-hover:border-slate-700">
+                                </div>
+                            </div>
+
+                            <div>
+                                <label
+                                    class="block text-xs font-medium text-slate-400 mb-3 uppercase tracking-wider">PCO
+                                    Sync List ID</label>
+                                <div class="relative flex items-center group">
+                                    <i data-lucide="list" class="w-4 h-4 text-indigo-400 absolute left-4"></i>
+                                    <input type="text" id="pcoListIdInput" placeholder="4661587"
+                                        class="w-full bg-slate-900/50 border border-slate-800/50 rounded-xl pl-11 pr-4 py-3 text-sm text-slate-200 focus:outline-none focus:border-indigo-500 transition-all group-hover:border-slate-700">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Display Name Format -->
+                        <div class="space-y-4">
+                            <label class="block text-xs font-medium text-slate-400 uppercase tracking-wider">Display
+                                Name Format Builder</label>
+                            <div class="flex flex-wrap gap-2">
+                                <button onclick="insertFieldCode('{first_name}')"
+                                    class="px-2.5 py-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-[10px] text-slate-300 border border-slate-700 transition-all">First
+                                    Name</button>
+                                <button onclick="insertFieldCode('{middle_name}')"
+                                    class="px-2.5 py-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-[10px] text-slate-300 border border-slate-700 transition-all">Middle
+                                    Name</button>
+                                <button onclick="insertFieldCode('{last_name}')"
+                                    class="px-2.5 py-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-[10px] text-slate-300 border border-slate-700 transition-all">Last
+                                    Name</button>
+                                <button onclick="insertFieldCode('{nickname}')"
+                                    class="px-2.5 py-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-[10px] text-slate-300 border border-slate-700 transition-all">Nickname</button>
+                                <button onclick="insertFieldCode('{prayer_group}')"
+                                    class="px-2.5 py-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-[10px] text-slate-300 border border-slate-700 transition-all">Prayer
+                                    Group</button>
+                            </div>
+                            <div class="relative flex items-center group">
+                                <i data-lucide="type" class="w-4 h-4 text-indigo-400 absolute left-4"></i>
+                                <input type="text" id="displayNameFormatInput" placeholder="{first_name} {last_name}"
+                                    class="w-full bg-slate-900/50 border border-slate-800/50 rounded-xl pl-11 pr-4 py-3 text-sm text-slate-200 focus:outline-none focus:border-indigo-500 transition-all font-mono group-hover:border-slate-700">
+                            </div>
+                            <div class="flex flex-col gap-2 px-1">
+                                <p class="text-[10px] text-slate-500 leading-relaxed">
+                                    <span class="text-indigo-400 font-semibold italic">Tip:</span> Use <code
+                                        class="bg-slate-800 px-1 rounded text-indigo-300">[ ]</code> for conditional
+                                    blocks.
+                                    Content inside brackets only displays if the field is not empty.
+                                    Example: <code
+                                        class="bg-slate-800 px-1 rounded text-indigo-300">["{nickname}"]</code>
+                                </p>
+                                <div class="flex items-center justify-between">
+                                    <p class="text-[10px] text-slate-500 flex items-center gap-1.5">
+                                        <span class="font-bold uppercase tracking-widest text-[9px]">Preview:</span>
+                                        <span id="displayNamePreview" class="text-indigo-400 font-medium italic">John
+                                            Smith</span>
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-8 flex justify-end">
+                        <button onclick="saveMemberSettings()" id="saveMemberSettingsBtn"
+                            class="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium rounded-xl transition-all flex items-center gap-2 shadow-lg shadow-indigo-900/20 active:scale-95">
+                            <i data-lucide="save" class="w-4 h-4"></i>
+                            Save Settings
+                        </button>
                     </div>
                 </div>
-            </div>
 
-            <div class="mt-8 flex justify-end">
-                <button onclick="saveMemberSettings()" id="saveMemberSettingsBtn" class="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium rounded-xl transition-all flex items-center gap-2 shadow-lg shadow-indigo-900/20 active:scale-95">
-                    <i data-lucide="save" class="w-4 h-4"></i>
-                    Save Settings
-                </button>
-            </div>
-        </div>
-
-        <!-- Logs Section -->
-        <section class="mt-8">
-            <div class="flex justify-between items-center mb-6">
-                <h2 class="text-xl font-semibold text-slate-200 flex items-center gap-2">
-                    <i data-lucide="terminal-square" class="w-5 h-5 text-indigo-400"></i>
-                    Member Sync Logs
-                </h2>
-                <div class="flex items-center gap-2">
-                    <button onclick="clearLogs('member')" class="text-[10px] uppercase tracking-wider font-bold px-3 py-1.5 rounded-lg bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 transition-all border border-rose-500/20 flex items-center gap-2">
-                        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Clear Logs
-                    </button>
-                </div>
-            </div>
-            <div id="logsContainer" class="space-y-4 pb-12">
-                <!-- JS will populate accordions here -->
-                <div class="text-center p-8 text-slate-400">Loading logs overview...</div>
-            </div>
-        </section>
+                <!-- Logs Section -->
+                <section class="mt-8">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-xl font-semibold text-slate-200 flex items-center gap-2">
+                            <i data-lucide="terminal-square" class="w-5 h-5 text-indigo-400"></i>
+                            Member Sync Logs
+                        </h2>
+                        <div class="flex items-center gap-2">
+                            <button onclick="clearLogs('member')"
+                                class="text-[10px] uppercase tracking-wider font-bold px-3 py-1.5 rounded-lg bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 transition-all border border-rose-500/20 flex items-center gap-2">
+                                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Clear Logs
+                            </button>
+                        </div>
+                    </div>
+                    <div id="logsContainer" class="space-y-4 pb-12">
+                        <!-- JS will populate accordions here -->
+                        <div class="text-center p-8 text-slate-400">Loading logs overview...</div>
+                    </div>
+                </section>
         </div> <!-- end panel-sync -->
 
         <!-- Tab: Member History -->
         <div id="panel-members" class="hidden">
-        <!-- Members Section -->
-        <section class="mt-8">
-            <div class="flex justify-between items-center mb-4">
-                <h2 class="text-xl font-semibold text-slate-200 flex items-center gap-2">
-                    <i data-lucide="history" class="w-5 h-5 text-indigo-400"></i>
-                    Member Sync History
-                </h2>
-                <button onclick="confirmClearHistory('member')" class="text-[10px] uppercase tracking-wider font-bold px-3 py-1.5 rounded-lg bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 transition-all border border-amber-500/20 flex items-center gap-2">
-                    <i data-lucide="history" class="w-3.5 h-3.5"></i> Clear History
-                </button>
-            </div>
-            <div class="glass-card rounded-2xl p-6 w-full">
-                <div class="flex items-center gap-3 mb-6">
-                    <div class="relative flex-1">
-                        <i data-lucide="search" class="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2"></i>
-                        <input type="text" id="memberSearch" placeholder="Search by name or ID..." class="w-full bg-slate-900/50 border border-slate-700/50 rounded-lg pl-9 pr-3 py-2 text-sm text-slate-300 focus:outline-none focus:border-indigo-500 transition-colors">
+            <!-- Members Section -->
+            <section class="mt-8">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-semibold text-slate-200 flex items-center gap-2">
+                        <i data-lucide="history" class="w-5 h-5 text-indigo-400"></i>
+                        Member Sync History
+                    </h2>
+                    <button onclick="confirmClearHistory('member')"
+                        class="text-[10px] uppercase tracking-wider font-bold px-3 py-1.5 rounded-lg bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 transition-all border border-amber-500/20 flex items-center gap-2">
+                        <i data-lucide="history" class="w-3.5 h-3.5"></i> Clear History
+                    </button>
+                </div>
+                <div class="glass-card rounded-2xl p-6 w-full">
+                    <div class="flex items-center gap-3 mb-6">
+                        <div class="relative flex-1">
+                            <i data-lucide="search"
+                                class="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2"></i>
+                            <input type="text" id="memberSearch" placeholder="Search by name or ID..."
+                                class="w-full bg-slate-900/50 border border-slate-700/50 rounded-lg pl-9 pr-3 py-2 text-sm text-slate-300 focus:outline-none focus:border-indigo-500 transition-colors">
+                        </div>
+                        <span id="memberCount" class="text-xs text-slate-500 whitespace-nowrap">Loading...</span>
                     </div>
-                    <span id="memberCount" class="text-xs text-slate-500 whitespace-nowrap">Loading...</span>
+                    <div id="membersTable"
+                        class="overflow-x-auto rounded-xl border border-slate-700/30 max-h-[60vh] overflow-y-auto">
+                        <table class="w-full text-sm">
+                            <thead>
+                                <tr class="bg-slate-800/50 text-left">
+                                    <th
+                                        class="px-4 py-2.5 text-[10px] font-bold text-slate-500 uppercase tracking-widest w-12 text-center">
+                                        #</th>
+                                    <th class="px-4 py-2.5 text-[10px] font-bold text-slate-500 uppercase tracking-widest cursor-pointer group"
+                                        onclick="setMemberSort('firstName')">
+                                        <div class="flex items-center gap-1.5">
+                                            First
+                                            <i data-lucide="chevron-down"
+                                                class="w-2.5 h-2.5 transition-opacity opacity-0 group-hover:opacity-100"
+                                                id="sort-firstName"></i>
+                                        </div>
+                                    </th>
+                                    <th class="px-4 py-2.5 text-[10px] font-bold text-slate-500 uppercase tracking-widest cursor-pointer group"
+                                        onclick="setMemberSort('lastName')">
+                                        <div class="flex items-center gap-1.5">
+                                            Last
+                                            <i data-lucide="chevron-down"
+                                                class="w-2.5 h-2.5 transition-opacity opacity-0 group-hover:opacity-100"
+                                                id="sort-lastName"></i>
+                                        </div>
+                                    </th>
+                                    <th class="px-4 py-2.5 text-[10px] font-bold text-slate-500 uppercase tracking-widest cursor-pointer group"
+                                        onclick="setMemberSort('pcId')">
+                                        <div class="flex items-center gap-1.5">
+                                            PC ID
+                                            <i data-lucide="chevron-down"
+                                                class="w-2.5 h-2.5 transition-opacity opacity-0 group-hover:opacity-100"
+                                                id="sort-pcId"></i>
+                                        </div>
+                                    </th>
+                                    <th class="px-4 py-2.5 text-[10px] font-bold text-slate-500 uppercase tracking-widest text-center cursor-pointer group"
+                                        onclick="setMemberSort('action')">
+                                        <div class="flex items-center gap-1.5 justify-center">
+                                            Action
+                                            <i data-lucide="chevron-down"
+                                                class="w-2.5 h-2.5 transition-opacity opacity-0 group-hover:opacity-100"
+                                                id="sort-action"></i>
+                                        </div>
+                                    </th>
+                                    <th class="px-4 py-2.5 text-[10px] font-bold text-slate-500 uppercase tracking-widest text-right cursor-pointer group"
+                                        onclick="setMemberSort('date')">
+                                        <div class="flex items-center gap-1.5 justify-end">
+                                            Synced
+                                            <i data-lucide="chevron-down"
+                                                class="w-2.5 h-2.5 transition-opacity opacity-0 group-hover:opacity-100"
+                                                id="sort-date"></i>
+                                        </div>
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody id="membersBody" class="divide-y divide-slate-700/30">
+                                <tr>
+                                    <td colspan="4" class="text-center py-8 text-slate-500">Loading member data...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
-                <div id="membersTable" class="overflow-x-auto rounded-xl border border-slate-700/30 max-h-[60vh] overflow-y-auto">
-                    <table class="w-full text-sm">
-                        <thead>
-                            <tr class="bg-slate-800/50 text-left">
-                                <th class="px-4 py-2.5 text-[10px] font-bold text-slate-500 uppercase tracking-widest w-12 text-center">#</th>
-                                <th class="px-4 py-2.5 text-[10px] font-bold text-slate-500 uppercase tracking-widest cursor-pointer group" onclick="setMemberSort('firstName')">
-                                    <div class="flex items-center gap-1.5">
-                                        First
-                                        <i data-lucide="chevron-down" class="w-2.5 h-2.5 transition-opacity opacity-0 group-hover:opacity-100" id="sort-firstName"></i>
-                                    </div>
-                                </th>
-                                <th class="px-4 py-2.5 text-[10px] font-bold text-slate-500 uppercase tracking-widest cursor-pointer group" onclick="setMemberSort('lastName')">
-                                    <div class="flex items-center gap-1.5">
-                                        Last
-                                        <i data-lucide="chevron-down" class="w-2.5 h-2.5 transition-opacity opacity-0 group-hover:opacity-100" id="sort-lastName"></i>
-                                    </div>
-                                </th>
-                                <th class="px-4 py-2.5 text-[10px] font-bold text-slate-500 uppercase tracking-widest cursor-pointer group" onclick="setMemberSort('pcId')">
-                                    <div class="flex items-center gap-1.5">
-                                        PC ID
-                                        <i data-lucide="chevron-down" class="w-2.5 h-2.5 transition-opacity opacity-0 group-hover:opacity-100" id="sort-pcId"></i>
-                                    </div>
-                                </th>
-                                <th class="px-4 py-2.5 text-[10px] font-bold text-slate-500 uppercase tracking-widest text-center cursor-pointer group" onclick="setMemberSort('action')">
-                                    <div class="flex items-center gap-1.5 justify-center">
-                                        Action
-                                        <i data-lucide="chevron-down" class="w-2.5 h-2.5 transition-opacity opacity-0 group-hover:opacity-100" id="sort-action"></i>
-                                    </div>
-                                </th>
-                                <th class="px-4 py-2.5 text-[10px] font-bold text-slate-500 uppercase tracking-widest text-right cursor-pointer group" onclick="setMemberSort('date')">
-                                    <div class="flex items-center gap-1.5 justify-end">
-                                        Synced
-                                        <i data-lucide="chevron-down" class="w-2.5 h-2.5 transition-opacity opacity-0 group-hover:opacity-100" id="sort-date"></i>
-                                    </div>
-                                </th>
-                            </tr>
-                        </thead>
-                        <tbody id="membersBody" class="divide-y divide-slate-700/30">
-                            <tr><td colspan="4" class="text-center py-8 text-slate-500">Loading member data...</td></tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </section>
+            </section>
         </div> <!-- end panel-members -->
 
         <!-- Tab: Donation Sync -->
         <div id="panel-donations" class="hidden">
-        <section class="mt-8">
-            <h2 class="text-xl font-semibold text-slate-200 mb-6 flex items-center gap-2">
-                <i data-lucide="banknote" class="w-5 h-5 text-indigo-400"></i>
-                Donation Info Sync (QB → PCO Giving)
-            </h2>
-
-            <!-- Status & Controls Row -->
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                <!-- Sync Control -->
-                <div class="glass-card rounded-2xl p-6 flex flex-col justify-start gap-4">
-                    <h3 class="text-xs font-semibold tracking-wider text-slate-400 uppercase">Controls</h3>
-                    <button id="donationSyncBtn" onclick="triggerDonationSync()" class="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-medium transition-all shadow-lg shadow-emerald-900/30 hover:shadow-emerald-800/40 active:scale-95">
-                        <i data-lucide="play" class="w-4 h-4" id="donSyncIcon"></i>
-                        <span id="donSyncText">Run Donation Sync</span>
-                    </button>
-                </div>
-
-                <!-- Last Sync Info -->
-                <div class="glass-card rounded-2xl p-6 flex flex-col justify-between">
-                    <div>
-                        <h3 class="text-xs font-semibold tracking-wider text-slate-400 mb-4 uppercase">Last Sync</h3>
-                        <div class="grid grid-cols-2 gap-y-3 text-sm mb-4">
-                            <p class="text-slate-500">Started</p>
-                            <p id="donStartTime" class="font-medium text-slate-200 text-right">--</p>
-                            <p class="text-slate-500">Duration</p>
-                            <p id="donDuration" class="font-medium text-indigo-400 text-right">--</p>
-                        </div>
-                    </div>
-                    <div class="border-t border-slate-800/50 pt-4">
-                        <h3 class="text-xs font-semibold tracking-wider text-slate-400 mb-2 uppercase">Next Sync</h3>
-                        <div class="grid grid-cols-2 text-sm">
-                            <p class="text-slate-500">Scheduled for</p>
-                            <p id="donNextSync" class="font-medium text-slate-200 text-right">--</p>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Results -->
-                <div class="glass-card rounded-2xl p-6 flex items-center justify-around text-center">
-                    <div class="flex-1">
-                        <i data-lucide="circle-check" class="w-6 h-6 text-green-400 mx-auto mb-2"></i>
-                        <p class="text-3xl font-bold text-slate-100" id="donStatCreated">-</p>
-                        <p class="text-[10px] text-slate-500 uppercase mt-1 font-semibold tracking-tight">Created</p>
-                    </div>
-                    <div class="w-px h-12 bg-slate-700/50"></div>
-                    <div class="flex-1">
-                        <i data-lucide="circle-minus" class="w-6 h-6 text-yellow-400 mx-auto mb-2"></i>
-                        <p class="text-3xl font-bold text-slate-100" id="donStatSkipped">-</p>
-                        <p class="text-[10px] text-slate-500 uppercase mt-1 font-semibold tracking-tight">Skipped</p>
-                    </div>
-                    <div class="w-px h-12 bg-slate-700/50"></div>
-                    <div class="flex-1">
-                        <i data-lucide="alert-triangle" class="w-6 h-6 text-red-500 mx-auto mb-2"></i>
-                        <p class="text-3xl font-bold text-slate-100" id="donStatErrors">-</p>
-                        <p class="text-[10px] text-slate-500 uppercase mt-1 font-semibold tracking-tight">Errors</p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Donation Sync Configuration Card -->
-            <div class="glass-card rounded-2xl p-8 mb-8 mt-8">
-                <div class="flex items-center justify-between mb-6">
-                    <h3 class="text-base font-semibold text-slate-200 flex items-center gap-2">
-                        <i data-lucide="settings" class="w-5 h-5 text-indigo-400"></i>
-                        Donation Sync Configuration
-                    </h3>
-                </div>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <!-- Transaction Type -->
-                    <div>
-                        <label class="block text-xs font-medium text-slate-400 mb-2 uppercase tracking-wider">QB Transaction Type</label>
-                        <select id="donTxnType" class="w-full bg-slate-900/50 border border-slate-700/50 rounded-lg px-3 py-2 text-sm text-slate-300 focus:outline-none focus:border-indigo-500 transition-colors">
-                            <option value="SalesReceipt">Sales Receipt</option>
-                            <option value="Payment">Payment</option>
-                            <option value="Invoice">Invoice</option>
-                            <option value="JournalEntry">Journal Entry</option>
-                        </select>
-                    </div>
-                    <!-- Default Fund -->
-                    <div>
-                        <label class="block text-xs font-medium text-slate-400 mb-2 uppercase tracking-wider">Default PCO Fund</label>
-                        <select id="donDefaultFund" class="w-full bg-slate-900/50 border border-slate-700/50 rounded-lg px-3 py-2 text-sm text-slate-300 focus:outline-none focus:border-indigo-500 transition-colors">
-                            <option value="">Loading funds...</option>
-                        </select>
-                    </div>
-                    <!-- Lookback Days -->
-                    <div>
-                        <label class="block text-xs font-medium text-slate-400 mb-2 uppercase tracking-wider">Lookback Days</label>
-                        <input type="number" id="donLookback" value="30" min="1" max="365" class="w-full bg-slate-900/50 border border-slate-700/50 rounded-lg px-3 py-2 text-sm text-slate-300 focus:outline-none focus:border-indigo-500 transition-colors">
-                    </div>
-                    <!-- Sync Frequency -->
-                    <div class="md:col-span-1">
-                        <label class="block text-xs font-medium text-slate-400 mb-2 uppercase tracking-wider">Sync Frequency</label>
-                        <div class="flex items-center gap-1.5 flex-wrap">
-                            <select id="donSyncFreq" class="bg-slate-900/50 border border-slate-700/50 rounded-lg px-2 py-1.5 text-xs text-slate-300 focus:outline-none focus:border-indigo-500 transition-colors">
-                                <option value="manual">Manual Only</option>
-                                <option value="daily">Daily</option>
-                                <option value="weekly">Weekly</option>
-                                <option value="monthly">Monthly</option>
-                            </select>
-                            <select id="donSchedDay" class="bg-slate-900/50 border border-slate-700/50 rounded-lg px-2 py-1.5 text-xs text-slate-300 focus:outline-none focus:border-indigo-500 transition-colors hidden"></select>
-                            <span id="donSchedAtLabel" class="text-slate-500 text-xs hidden">at</span>
-                            <select id="donSchedHour" class="bg-slate-900/50 border border-slate-700/50 rounded-lg px-2 py-1.5 text-xs text-slate-300 focus:outline-none focus:border-indigo-500 transition-colors hidden"></select>
-                        </div>
-                    </div>
-                    <!-- Notification Email -->
-                    <div class="md:col-span-2">
-                        <label class="block text-xs font-medium text-slate-400 mb-2 uppercase tracking-wider">Notification Email</label>
-                        <input type="email" id="donConfirmEmail" placeholder="church-admin@example.com" class="w-full bg-slate-900/50 border border-slate-700/50 rounded-lg px-3 py-2 text-sm text-slate-300 focus:outline-none focus:border-indigo-500 transition-colors">
-                    </div>
-                </div>
-
-                <!-- Fund Mapping -->
-                <div class="mt-6">
-                    <label class="block text-xs font-medium text-slate-400 mb-2 uppercase tracking-wider">Fund Mapping (QB Account Name → PCO Fund Name)</label>
-                    <datalist id="qbEntitiesList"></datalist>
-                    <div id="fundMappingContainer" class="space-y-2 mb-3"></div>
-                    <button onclick="addFundMapping()" class="flex items-center gap-1.5 text-xs text-indigo-400 hover:text-indigo-300 transition-colors">
-                        <i data-lucide="plus-circle" class="w-3.5 h-3.5"></i> Add Mapping
-                    </button>
-                </div>
-
-                <div class="mt-5 flex justify-end">
-                    <button onclick="saveDonationSettings()" id="saveDonSettingsBtn" class="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium rounded-xl transition-all flex items-center gap-2 shadow-lg shadow-indigo-900/20 active:scale-95">
-                        <i data-lucide="save" class="w-4 h-4"></i> Save Settings
-                    </button>
-                </div>
-            </div>
-
-            <!-- Donation Sync Logs Section -->
             <section class="mt-8">
-                <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-xl font-semibold text-slate-200 flex items-center gap-2">
-                        <i data-lucide="terminal-square" class="w-5 h-5 text-indigo-400"></i>
-                        Donation Sync Logs
-                    </h2>
-                    <div class="flex items-center gap-2">
-                        <button onclick="clearLogs('donation')" class="text-[10px] uppercase tracking-wider font-bold px-3 py-1.5 rounded-lg bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 transition-all border border-rose-500/20 flex items-center gap-2">
-                            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Clear Logs
+                <h2 class="text-xl font-semibold text-slate-200 mb-6 flex items-center gap-2">
+                    <i data-lucide="banknote" class="w-5 h-5 text-indigo-400"></i>
+                    Donation Info Sync (QB → PCO Giving)
+                </h2>
+
+                <!-- Status & Controls Row -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                    <!-- Sync Control -->
+                    <div class="glass-card rounded-2xl p-6 flex flex-col justify-start gap-4">
+                        <h3 class="text-xs font-semibold tracking-wider text-slate-400 uppercase">Controls</h3>
+                        <button id="donationSyncBtn" onclick="triggerDonationSync()"
+                            class="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-medium transition-all shadow-lg shadow-emerald-900/30 hover:shadow-emerald-800/40 active:scale-95">
+                            <i data-lucide="play" class="w-4 h-4" id="donSyncIcon"></i>
+                            <span id="donSyncText">Run Donation Sync</span>
+                        </button>
+                    </div>
+
+                    <!-- Last Sync Info -->
+                    <div class="glass-card rounded-2xl p-6 flex flex-col justify-between">
+                        <div>
+                            <h3 class="text-xs font-semibold tracking-wider text-slate-400 mb-4 uppercase">Last Sync
+                            </h3>
+                            <div class="grid grid-cols-2 gap-y-3 text-sm mb-4">
+                                <p class="text-slate-500">Started</p>
+                                <p id="donStartTime" class="font-medium text-slate-200 text-right">--</p>
+                                <p class="text-slate-500">Duration</p>
+                                <p id="donDuration" class="font-medium text-indigo-400 text-right">--</p>
+                            </div>
+                        </div>
+                        <div class="border-t border-slate-800/50 pt-4">
+                            <h3 class="text-xs font-semibold tracking-wider text-slate-400 mb-2 uppercase">Next Sync
+                            </h3>
+                            <div class="grid grid-cols-2 text-sm">
+                                <p class="text-slate-500">Scheduled for</p>
+                                <p id="donNextSync" class="font-medium text-slate-200 text-right">--</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Results -->
+                    <div class="glass-card rounded-2xl p-6 flex items-center justify-around text-center">
+                        <div class="flex-1">
+                            <i data-lucide="circle-check" class="w-6 h-6 text-green-400 mx-auto mb-2"></i>
+                            <p class="text-3xl font-bold text-slate-100" id="donStatCreated">-</p>
+                            <p class="text-[10px] text-slate-500 uppercase mt-1 font-semibold tracking-tight">Created
+                            </p>
+                        </div>
+                        <div class="w-px h-12 bg-slate-700/50"></div>
+                        <div class="flex-1">
+                            <i data-lucide="circle-minus" class="w-6 h-6 text-yellow-400 mx-auto mb-2"></i>
+                            <p class="text-3xl font-bold text-slate-100" id="donStatSkipped">-</p>
+                            <p class="text-[10px] text-slate-500 uppercase mt-1 font-semibold tracking-tight">Skipped
+                            </p>
+                        </div>
+                        <div class="w-px h-12 bg-slate-700/50"></div>
+                        <div class="flex-1">
+                            <i data-lucide="alert-triangle" class="w-6 h-6 text-red-500 mx-auto mb-2"></i>
+                            <p class="text-3xl font-bold text-slate-100" id="donStatErrors">-</p>
+                            <p class="text-[10px] text-slate-500 uppercase mt-1 font-semibold tracking-tight">Errors</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Donation Sync Configuration Card -->
+                <div class="glass-card rounded-2xl p-8 mb-8 mt-8">
+                    <div class="flex items-center justify-between mb-6">
+                        <h3 class="text-base font-semibold text-slate-200 flex items-center gap-2">
+                            <i data-lucide="settings" class="w-5 h-5 text-indigo-400"></i>
+                            Donation Sync Configuration
+                        </h3>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <!-- Transaction Type -->
+                        <div>
+                            <label class="block text-xs font-medium text-slate-400 mb-2 uppercase tracking-wider">QB
+                                Transaction Type</label>
+                            <select id="donTxnType"
+                                class="w-full bg-slate-900/50 border border-slate-700/50 rounded-lg px-3 py-2 text-sm text-slate-300 focus:outline-none focus:border-indigo-500 transition-colors">
+                                <option value="SalesReceipt">Sales Receipt</option>
+                                <option value="Payment">Payment</option>
+                                <option value="Invoice">Invoice</option>
+                                <option value="JournalEntry">Journal Entry</option>
+                            </select>
+                        </div>
+                        <!-- Default Fund -->
+                        <div>
+                            <label
+                                class="block text-xs font-medium text-slate-400 mb-2 uppercase tracking-wider">Default
+                                PCO Fund</label>
+                            <select id="donDefaultFund"
+                                class="w-full bg-slate-900/50 border border-slate-700/50 rounded-lg px-3 py-2 text-sm text-slate-300 focus:outline-none focus:border-indigo-500 transition-colors">
+                                <option value="">Loading funds...</option>
+                            </select>
+                        </div>
+                        <!-- Lookback Days -->
+                        <div>
+                            <label
+                                class="block text-xs font-medium text-slate-400 mb-2 uppercase tracking-wider">Lookback
+                                Days</label>
+                            <input type="number" id="donLookback" value="30" min="1" max="365"
+                                class="w-full bg-slate-900/50 border border-slate-700/50 rounded-lg px-3 py-2 text-sm text-slate-300 focus:outline-none focus:border-indigo-500 transition-colors">
+                        </div>
+                        <!-- Auto-Map Funds -->
+                        <div>
+                            <label class="block text-xs font-medium text-slate-400 mb-2 uppercase tracking-wider">Auto-create PCO Funds</label>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" id="donAutoMap" class="sr-only peer">
+                                <div class="w-11 h-6 bg-slate-700/50 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                                <span class="ml-3 text-xs font-medium text-slate-400">Create unlisted funds if missing</span>
+                            </label>
+                        </div>
+                        <!-- Sync Frequency -->
+                        <div class="md:col-span-1">
+                            <label class="block text-xs font-medium text-slate-400 mb-2 uppercase tracking-wider">Sync
+                                Frequency</label>
+                            <div class="flex items-center gap-1.5 flex-wrap">
+                                <select id="donSyncFreq"
+                                    class="bg-slate-900/50 border border-slate-700/50 rounded-lg px-2 py-1.5 text-xs text-slate-300 focus:outline-none focus:border-indigo-500 transition-colors">
+                                    <option value="manual">Manual Only</option>
+                                    <option value="daily">Daily</option>
+                                    <option value="weekly">Weekly</option>
+                                    <option value="monthly">Monthly</option>
+                                </select>
+                                <select id="donSchedDay"
+                                    class="bg-slate-900/50 border border-slate-700/50 rounded-lg px-2 py-1.5 text-xs text-slate-300 focus:outline-none focus:border-indigo-500 transition-colors hidden"></select>
+                                <span id="donSchedAtLabel" class="text-slate-500 text-xs hidden">at</span>
+                                <select id="donSchedHour"
+                                    class="bg-slate-900/50 border border-slate-700/50 rounded-lg px-2 py-1.5 text-xs text-slate-300 focus:outline-none focus:border-indigo-500 transition-colors hidden"></select>
+                            </div>
+                        </div>
+                        <!-- Notification Email -->
+                        <div class="md:col-span-2">
+                            <label
+                                class="block text-xs font-medium text-slate-400 mb-2 uppercase tracking-wider">Notification
+                                Email</label>
+                            <input type="email" id="donConfirmEmail" placeholder="church-admin@example.com"
+                                class="w-full bg-slate-900/50 border border-slate-700/50 rounded-lg px-3 py-2 text-sm text-slate-300 focus:outline-none focus:border-indigo-500 transition-colors">
+                        </div>
+                    </div>
+
+                    <!-- Product/Service Mapping -->
+                    <div class="mt-6">
+                        <label class="block text-xs font-medium text-slate-400 mb-2 uppercase tracking-wider">Product/Service Mapping</label>
+                        <p class="text-[10px] text-slate-500 mb-3 italic">Map specific QuickBooks Products/Services to Planning Center Funds. Unmapped items use the Default Fund above.</p>
+                        <div id="fundMappingHeader" class="grid grid-cols-[1fr,24px,1fr,40px] gap-3 px-1 mb-2">
+                             <span class="text-[9px] font-bold text-slate-500 uppercase">QuickBooks Item</span>
+                             <span></span>
+                             <span class="text-[9px] font-bold text-slate-500 uppercase">PCO Fund</span>
+                             <span></span>
+                        </div>
+                        <div id="fundMappingContainer" class="space-y-3"></div>
+                        <button onclick="addFundMapping()"
+                            class="mt-4 flex items-center gap-1.5 text-xs text-indigo-400 hover:text-indigo-300 transition-colors bg-indigo-500/5 px-3 py-2 rounded-lg border border-indigo-500/10">
+                            <i data-lucide="plus-circle" class="w-3.5 h-3.5"></i> Add Mapping
+                        </button>
+                    </div>
+
+                    <div class="mt-5 flex justify-end">
+                        <button onclick="saveDonationSettings()" id="saveDonSettingsBtn"
+                            class="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium rounded-xl transition-all flex items-center gap-2 shadow-lg shadow-indigo-900/20 active:scale-95">
+                            <i data-lucide="save" class="w-4 h-4"></i> Save Settings
                         </button>
                     </div>
                 </div>
-                <div id="donationsLogsContainer" class="space-y-4 pb-12">
-                    <!-- JS will populate accordions here -->
-                    <div class="text-center p-8 text-slate-400">Loading donation logs overview...</div>
-                </div>
-            </section>
-        </section>
-        </div> <!-- end panel-donations -->
-        
-        <!-- Tab: System Settings -->
-        <div id="panel-settings" class="hidden">
-            <section class="mt-8">
-                <h2 class="text-xl font-semibold text-slate-200 mb-6 flex items-center gap-2">
-                    <i data-lucide="settings" class="w-5 h-5 text-indigo-400"></i>
-                    System & Connection Settings
-                </h2>
-        
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                    <!-- QuickBooks Connection -->
-                    <div class="glass-card rounded-2xl p-8">
-                        <h3 class="text-base font-semibold text-slate-200 mb-6 flex items-center gap-2">
-                            <img src="/static/logos/qb-logo.svg" class="h-5 w-auto" alt="QB">
-                            QuickBooks OAuth Credentials
-                        </h3>
-                        <div class="space-y-4">
-                            <div>
-                                <label class="block text-xs font-medium text-slate-400 mb-2 uppercase tracking-wider">Client ID</label>
-                                <input type="text" id="qbClientId" placeholder="Get from Intuit Developer Portal" class="w-full bg-slate-900/50 border border-slate-700/50 rounded-lg px-3 py-2 text-sm text-slate-300 focus:outline-none focus:border-indigo-500 transition-colors">
-                            </div>
-                            <div>
-                                <label class="block text-xs font-medium text-slate-400 mb-2 uppercase tracking-wider">Client Secret</label>
-                                <div class="relative">
-                                    <input type="password" id="qbClientSecret" placeholder="Keep current or enter new" class="w-full bg-slate-900/50 border border-slate-700/50 rounded-lg px-3 py-2 text-sm text-slate-300 focus:outline-none focus:border-indigo-500 transition-colors">
-                                    <button onclick="togglePassword('qbClientSecret')" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300">
-                                        <i data-lucide="eye" class="w-4 h-4"></i>
-                                    </button>
-                                </div>
-                            </div>
-                            <div>
-                                <label class="block text-xs font-medium text-slate-400 mb-2 uppercase tracking-wider">Refresh Token</label>
-                                <div class="relative">
-                                    <textarea id="qbRefreshToken" rows="4" class="w-full bg-slate-900/50 border border-slate-700/50 rounded-lg px-3 py-2 text-sm text-slate-300 focus:outline-none focus:border-indigo-500 transition-colors font-mono" placeholder="Paste your new refresh token here..."></textarea>
-                                </div>
-                                <p class="text-[10px] text-slate-500 mt-2 flex items-center gap-1.5">
-                                    <i data-lucide="info" class="w-3 h-3 text-indigo-400"></i>
-                                    Note: Refresh tokens rotate. This UI allows you to manually provide a seed token if the connection is lost.
-                                </p>
-                            </div>
-                            <div>
-                                <label class="block text-xs font-medium text-slate-400 mb-2 uppercase tracking-wider">Realm ID (Company ID)</label>
-                                <input type="text" id="qbRealmId" placeholder="1231460..." class="w-full bg-slate-900/50 border border-slate-700/50 rounded-lg px-3 py-2 text-sm text-slate-300 focus:outline-none focus:border-indigo-500 transition-colors">
-                            </div>
-                            <div>
-                                <label class="block text-xs font-medium text-slate-400 mb-2 uppercase tracking-wider">Environment</label>
-                                <select id="qbEnv" class="w-full bg-slate-900/50 border border-slate-700/50 rounded-lg px-3 py-2 text-sm text-slate-300 focus:outline-none focus:border-indigo-500 transition-colors">
-                                    <option value="sandbox">Sandbox</option>
-                                    <option value="production">Production</option>
-                                </select>
-                            </div>
-                        </div>
-        
-                        <div class="mt-8 flex justify-between items-center">
-                            <div id="qbSavedFeedback" class="text-xs text-emerald-400 font-medium hidden">
-                                <i data-lucide="check-circle" class="w-3.5 h-3.5 inline mr-1"></i> Saved Successfully
-                            </div>
-                            <button onclick="saveQBCredentials()" id="saveQBCredsBtn" class="ml-auto px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium rounded-xl transition-all flex items-center gap-2 shadow-lg shadow-indigo-900/20 active:scale-95">
-                                <i data-lucide="save" class="w-4 h-4"></i>
-                                Save QB Credentials
+
+                <!-- Donation Sync Logs Section -->
+                <section class="mt-8">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-xl font-semibold text-slate-200 flex items-center gap-2">
+                            <i data-lucide="terminal-square" class="w-5 h-5 text-indigo-400"></i>
+                            Donation Sync Logs
+                        </h2>
+                        <div class="flex items-center gap-2">
+                            <button onclick="clearLogs('donation')"
+                                class="text-[10px] uppercase tracking-wider font-bold px-3 py-1.5 rounded-lg bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 transition-all border border-rose-500/20 flex items-center gap-2">
+                                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Clear Logs
                             </button>
                         </div>
                     </div>
-        
-                    <!-- Help/Information -->
-                    <div class="space-y-6">
-                        <div class="glass-card rounded-2xl p-6 border-l-4 border-indigo-500">
-                             <h3 class="text-sm font-semibold text-slate-200 mb-4 flex items-center gap-2">
-                                <i data-lucide="help-circle" class="w-4 h-4 text-indigo-400"></i>
-                                How to get a Refresh Token
-                            </h3>
-                            <ol class="text-xs text-slate-400 space-y-3 list-decimal pl-4 leading-relaxed">
-                                <li>Log in to the <a href="https://developer.intuit.com/app/developer/playground" target="_blank" class="text-indigo-400 hover:underline">Intuit OAuth Playground</a>.</li>
-                                <li>Select your app and choice the <code class="bg-slate-800 px-1 rounded text-indigo-300">com.intuit.quickbooks.accounting</code> scope.</li>
-                                <li>Click <strong>Get Authorization Code</strong> and authorize access.</li>
-                                <li>Click <strong>Get Tokens</strong> to generate a fresh <strong>Refresh Token</strong>.</li>
-                                <li>Copy the <strong>Refresh Token</strong> and paste it into the form on the left.</li>
-                            </ol>
+                    <div id="donationsLogsContainer" class="space-y-4 pb-12">
+                        <!-- JS will populate accordions here -->
+                        <div class="text-center p-8 text-slate-400">Loading donation logs overview...</div>
+                    </div>
+                </section>
+            </section>
+        </div> <!-- end panel-donations -->
+
+        <!-- Tab: System Settings -->
+        <div id="panel-settings" class="hidden">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 pt-8">
+                <!-- Left Column: Unified Config -->
+                <div class="space-y-6">
+                    <h2 class="text-xl font-semibold text-slate-200 mb-2 flex items-center gap-2">
+                        <i data-lucide="sliders" class="w-5 h-5 text-indigo-400"></i>
+                        System Configuration
+                    </h2>
+
+                    <!-- General Environment Card -->
+                    <div class="glass-card rounded-2xl overflow-hidden">
+                         <button onclick="toggleCard('card-general')" class="w-full px-6 py-4 flex items-center justify-between hover:bg-white/5 transition-colors group">
+                            <div class="flex items-center gap-3">
+                                <i data-lucide="settings" class="w-5 h-5 text-slate-400"></i>
+                                <span class="font-semibold text-slate-200 group-hover:text-white transition-colors">General Settings</span>
+                            </div>
+                            <i data-lucide="chevron-down" class="w-5 h-5 text-slate-500 rotate-icon" id="icon-card-general"></i>
+                        </button>
+                        <div id="card-general" class="collapsible-content px-6 pb-6 space-y-4">
+                            <div class="pt-4 grid grid-cols-1 gap-4" id="env-general">
+                                <!-- Dynamic General Fields -->
+                            </div>
+                            <button onclick="saveEnvSection('general')" class="mt-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-lg transition-colors flex items-center gap-2">
+                                <i data-lucide="save" class="w-3.5 h-3.5"></i> Save General Settings
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- PCO Card -->
+                    <div class="glass-card rounded-2xl overflow-hidden">
+                        <button onclick="toggleCard('card-pco')" class="w-full px-6 py-4 flex items-center justify-between hover:bg-white/5 transition-colors group">
+                            <div class="flex items-center gap-3">
+                                <img src="/static/logos/pco-square.svg" class="w-5 h-5" alt="PCO">
+                                <span class="font-semibold text-slate-200 group-hover:text-white transition-colors">Planning Center (PCO)</span>
+                            </div>
+                            <i data-lucide="chevron-down" class="w-5 h-5 text-slate-500 rotate-icon" id="icon-card-pco"></i>
+                        </button>
+                        <div id="card-pco" class="collapsible-content px-6 pb-6 space-y-4">
+                            <div class="pt-4 grid grid-cols-1 gap-4" id="env-pco">
+                                <!-- Dynamic PCO Fields -->
+                            </div>
+                            <button onclick="saveEnvSection('pco')" class="mt-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-lg transition-colors flex items-center gap-2">
+                                <i data-lucide="save" class="w-3.5 h-3.5"></i> Save PCO Settings
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- QuickBooks Card -->
+                    <div class="glass-card rounded-2xl overflow-hidden">
+                        <button onclick="toggleCard('card-qb')" class="w-full px-6 py-4 flex items-center justify-between hover:bg-white/5 transition-colors group">
+                            <div class="flex items-center gap-3">
+                                <img src="/static/logos/qb-square.svg" class="w-5 h-5" alt="QB">
+                                <span class="font-semibold text-slate-200 group-hover:text-white transition-colors">QuickBooks Online</span>
+                            </div>
+                            <i data-lucide="chevron-down" class="w-5 h-5 text-slate-500 rotate-icon" id="icon-card-qb"></i>
+                        </button>
+                        <div id="card-qb" class="collapsible-content px-6 pb-6 space-y-4">
+                            <div class="pt-4 grid grid-cols-1 gap-4" id="env-qb">
+                                <!-- Dynamic QB Fields -->
+                            </div>
+                            <div class="flex items-center gap-3 mt-4">
+                                <button onclick="saveEnvSection('qb')" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-lg transition-colors flex items-center gap-2">
+                                    <i data-lucide="save" class="w-3.5 h-3.5"></i> Save QB Settings
+                                </button>
+                                <a href="javascript:void(0)" onclick="openRefreshTokenHelp()" class="text-[10px] text-indigo-400 hover:text-indigo-300 flex items-center gap-1">
+                                    <i data-lucide="help-circle" class="w-3 h-3"></i> How to get a Refresh Token?
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- SMTP Card -->
+                    <div class="glass-card rounded-2xl overflow-hidden">
+                        <button onclick="toggleCard('card-smtp')" class="w-full px-6 py-4 flex items-center justify-between hover:bg-white/5 transition-colors group">
+                            <div class="flex items-center gap-3">
+                                <i data-lucide="mail" class="w-5 h-5 text-indigo-400"></i>
+                                <span class="font-semibold text-slate-200 group-hover:text-white transition-colors">Email (SMTP) Settings</span>
+                            </div>
+                            <i data-lucide="chevron-down" class="w-5 h-5 text-slate-500 rotate-icon" id="icon-card-smtp"></i>
+                        </button>
+                        <div id="card-smtp" class="collapsible-content px-6 pb-6 space-y-4">
+                            <div class="pt-4 grid grid-cols-1 gap-4" id="env-smtp">
+                                <!-- Dynamic SMTP Fields -->
+                            </div>
+                            <button onclick="saveEnvSection('smtp')" class="mt-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-lg transition-colors flex items-center gap-2">
+                                <i data-lucide="save" class="w-3.5 h-3.5"></i> Save Email Settings
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Azure Card -->
+                    <div class="glass-card rounded-2xl overflow-hidden">
+                        <button onclick="toggleCard('card-azure')" class="w-full px-6 py-4 flex items-center justify-between hover:bg-white/5 transition-colors group">
+                            <div class="flex items-center gap-3">
+                                <i data-lucide="shield" class="w-5 h-5 text-indigo-400"></i>
+                                <span class="font-semibold text-slate-200 group-hover:text-white transition-colors">Azure AD / Admin SSO</span>
+                            </div>
+                            <i data-lucide="chevron-down" class="w-5 h-5 text-slate-500 rotate-icon" id="icon-card-azure"></i>
+                        </button>
+                        <div id="card-azure" class="collapsible-content px-6 pb-6 space-y-4">
+                            <div class="pt-4 grid grid-cols-1 gap-4" id="env-azure">
+                                <!-- Dynamic Azure Fields -->
+                            </div>
+                            <button onclick="saveEnvSection('azure')" class="mt-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-lg transition-colors flex items-center gap-2">
+                                <i data-lucide="save" class="w-3.5 h-3.5"></i> Save SSO Settings
+                            </button>
                         </div>
                     </div>
                 </div>
-            </section>
+
+                <!-- Right Column: Admin Access & General -->
+                <div class="space-y-6">
+                    <h2 class="text-xl font-semibold text-slate-200 mb-2 flex items-center gap-2">
+                        <i data-lucide="lock" class="w-5 h-5 text-indigo-400"></i>
+                        Admin Access Management
+                    </h2>
+
+                    <!-- Admin Access Card -->
+                    <div class="glass-card rounded-2xl p-6 space-y-6">
+                        <div class="flex items-center justify-between">
+                            <div class="space-y-1">
+                                <h3 class="text-sm font-semibold text-slate-200">Local Admin Login</h3>
+                                <p class="text-xs text-slate-500">Allow logging in with local username/password</p>
+                            </div>
+                            <button onclick="toggleLocalLogin()" id="settingsLocalLoginToggle"
+                                class="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none bg-indigo-600">
+                                <span id="settingsLocalLoginToggleDot"
+                                    class="pointer-events-none inline-block h-5 w-5 translate-x-6 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"></span>
+                            </button>
+                        </div>
+
+                        <div class="space-y-4 pt-4 border-t border-slate-700/50">
+                            <h3 class="text-sm font-semibold text-slate-200">Change Admin Password</h3>
+                            <div class="space-y-3">
+                                <div class="space-y-1.5">
+                                    <label class="text-[10px] font-bold text-slate-500 uppercase">New Password</label>
+                                    <div class="relative">
+                                        <input type="password" id="settingsNewLocalPassword"
+                                            class="w-full bg-slate-900/50 border border-slate-700/50 rounded-xl px-4 py-2.5 text-slate-200 focus:outline-none focus:border-indigo-500 transition-colors pr-10"
+                                            placeholder="••••••••">
+                                        <button onclick="togglePassword('settingsNewLocalPassword')"
+                                            class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300">
+                                            <i data-lucide="eye" class="w-4 h-4"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="space-y-1.5">
+                                    <label class="text-[10px] font-bold text-slate-500 uppercase">Confirm Password</label>
+                                    <div class="relative">
+                                        <input type="password" id="settingsConfirmLocalPassword"
+                                            class="w-full bg-slate-900/50 border border-slate-700/50 rounded-xl px-4 py-2.5 text-slate-200 focus:outline-none focus:border-indigo-500 transition-colors pr-10"
+                                            placeholder="••••••••">
+                                        <button onclick="togglePassword('settingsConfirmLocalPassword')"
+                                            class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300">
+                                            <i data-lucide="eye" class="w-4 h-4"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <button id="saveAdminSettingsBtn" onclick="saveLocalSettings()"
+                            class="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium transition-all active:scale-[0.98]">
+                            <i data-lucide="save" class="w-4 h-4"></i>
+                            Save Admin Settings
+                        </button>
+                    </div>
+
+                </div>
+            </div>
         </div>
     </div> <!-- end max-w container -->
 
     <!-- Member History Modal -->
     <div id="memberModal" class="fixed inset-0 z-50 hidden">
         <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" onclick="closeMemberModal()"></div>
-        <div class="absolute right-0 top-0 h-full w-full max-w-lg bg-slate-900 border-l border-slate-700/50 shadow-2xl overflow-y-auto">
-            <div class="sticky top-0 bg-slate-900/95 backdrop-blur-sm border-b border-slate-700/30 px-6 py-4 flex items-center justify-between">
+        <div
+            class="absolute right-0 top-0 h-full w-full max-w-lg bg-slate-900 border-l border-slate-700/50 shadow-2xl overflow-y-auto">
+            <div
+                class="sticky top-0 bg-slate-900/95 backdrop-blur-sm border-b border-slate-700/30 px-6 py-4 flex items-center justify-between">
                 <div>
                     <h3 id="modalMemberName" class="text-lg font-semibold text-slate-200"></h3>
                     <p id="modalMemberID" class="text-xs text-slate-500 mt-0.5"></p>
                 </div>
-                <button onclick="closeMemberModal()" class="p-2 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition-colors">
+                <button onclick="closeMemberModal()"
+                    class="p-2 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition-colors">
                     <i data-lucide="x" class="w-5 h-5"></i>
                 </button>
             </div>
@@ -627,16 +928,19 @@
             document.getElementById('panel-members').classList.toggle('hidden', tab !== 'members');
             document.getElementById('panel-donations').classList.toggle('hidden', tab !== 'donations');
             document.getElementById('panel-settings').classList.toggle('hidden', tab !== 'settings');
-            
+
             document.querySelectorAll('.tab-btn').forEach(btn => {
                 btn.className = 'tab-btn px-5 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 text-slate-400 hover:text-slate-200';
             });
             document.getElementById(`tab-${tab}`).className = 'tab-btn px-5 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 bg-indigo-600/20 text-indigo-300';
             lucide.createIcons();
-            
+
             if (tab === 'members') fetchMembers();
             if (tab === 'donations') { fetchDonationStatus(); loadDonationSettings(); }
-            if (tab === 'settings') loadQBCredentials();
+            if (tab === 'settings') {
+                loadEnvironmentConfig();
+                loadLocalAdminSettings();
+            }
         }
 
         // State
@@ -686,7 +990,7 @@
         const formatLogDate = (logFilename) => {
             const match = logFilename.match(/(?:donations_)?sync_(\d{4})(\d{2})(\d{2})_(\d{2})(\d{2})(\d{2})/);
             const prefix = logFilename.startsWith('donations_') ? 'Donation Sync' : 'Member Sync';
-            if(match) {
+            if (match) {
                 const year = match[1], month = parseInt(match[2]) - 1, day = match[3];
                 const hour = match[4], min = match[5], sec = match[6];
                 const d = new Date(year, month, day, hour, min, sec);
@@ -698,23 +1002,23 @@
         const formatDate = (isoStr) => {
             if (!isoStr) return '--';
             const d = new Date(isoStr);
-            if (isNaN(d.getTime())) return isoStr; 
+            if (isNaN(d.getTime())) return isoStr;
             // Standardizing to: Mon Mar 24, 9:28:30 PM
-            return d.toLocaleString('en-US', { 
-                weekday: 'short', 
-                month: 'short', 
-                day: 'numeric', 
-                hour: 'numeric', 
-                minute: '2-digit', 
+            return d.toLocaleString('en-US', {
+                weekday: 'short',
+                month: 'short',
+                day: 'numeric',
+                hour: 'numeric',
+                minute: '2-digit',
                 second: '2-digit',
-                hour12: true 
+                hour12: true
             });
         };
 
         const syntaxHighlightLog = (text) => {
             if (!text) return '';
             const escaped = text.replace(/</g, '&lt;').replace(/>/g, '&gt;');
-            
+
             return escaped.split('\n').map(line => {
                 let colorClass = 'text-slate-300';
                 if (line.includes('- ERROR -') || line.includes('FATAL ERROR')) {
@@ -734,10 +1038,10 @@
             if (!status) return;
             const indicator = document.getElementById('statusIndicator');
             const text = document.getElementById('statusText');
-            
+
             indicator.className = 'w-1.5 h-1.5 rounded-full';
             text.className = 'text-[11px] font-bold uppercase tracking-wider text-right transition-colors duration-500';
-            
+
             let statusLabel = 'Member Sync: ';
             if (status.status === 'Running') {
                 indicator.classList.add('bg-blue-400', 'pulse-indicator');
@@ -781,7 +1085,7 @@
             setElText('statErrors', summary.errors !== undefined ? summary.errors : '-');
             setElText('startTime', formatDate(summary.start_time));
             setElText('endTime', formatDate(summary.end_time));
-            
+
             if (summary.start_time && summary.end_time) {
                 const s = new Date(summary.start_time);
                 const e = new Date(summary.end_time);
@@ -838,7 +1142,7 @@
                 </div>
             `}).join('');
             lucide.createIcons();
-            
+
             // Re-open active log if it still exists
             if (active && list.includes(active)) {
                 openAccordionDOM(active);
@@ -909,7 +1213,7 @@
             const term = document.getElementById(`search-${id}`).value.toLowerCase();
             const pre = document.getElementById(`pre-${id}`);
             if (!pre) return;
-            
+
             const lines = pre.querySelectorAll('.log-line');
             lines.forEach(line => {
                 if (!term || line.textContent.toLowerCase().includes(term)) {
@@ -926,7 +1230,7 @@
             if (autoScrollState[log]) {
                 const id = safeId(log);
                 const container = document.getElementById(`scrollContainer-${id}`);
-                if(container) container.scrollTop = container.scrollHeight;
+                if (container) container.scrollTop = container.scrollHeight;
             }
         };
 
@@ -935,7 +1239,7 @@
             const btn = document.getElementById(`autoScrollBtn-${id}`);
             const dot = document.getElementById(`autoScrollDot-${id}`);
             if (!btn || !dot) return;
-            
+
             if (autoScrollState[log]) {
                 btn.className = "text-xs font-medium px-3 py-1.5 rounded-full bg-indigo-500/20 text-indigo-300 hover:bg-indigo-500/30 transition-colors flex items-center gap-2 shrink-0";
                 dot.className = "w-2 h-2 rounded-full bg-indigo-400";
@@ -960,10 +1264,10 @@
             const loader = document.getElementById(`loader-${id}`);
             const pre = document.getElementById(`pre-${id}`);
             const container = document.getElementById(`scrollContainer-${id}`);
-            
+
             if (!pre) return;
             if (!silent && loader) loader.classList.remove('hidden');
-            
+
             try {
                 const authQuery = window.location.search;
                 let url = `/api/logs/${encodeURIComponent(filename)}${authQuery}`;
@@ -981,7 +1285,7 @@
                         pre.innerHTML = syntaxHighlightLog(text);
                         // Re-apply search filter
                         searchLog(filename);
-                        
+
                         if (autoScrollState[filename] && container) {
                             container.scrollTop = container.scrollHeight;
                         }
@@ -998,16 +1302,16 @@
 
         const fetchStatus = async () => {
             try {
-                const url = window.location.pathname.includes('/api/dashboard') 
+                const url = window.location.pathname.includes('/api/dashboard')
                     ? '/api/status' + window.location.search : '/api/status';
-                
+
                 const res = await fetch(url);
                 if (res.status === 401) {
                     window.location.href = '/login';
                     return;
                 }
                 const data = await res.json();
-                
+
                 // Pass status (including potential error) to UI update function
                 if (data.status) {
                     updateStatusUI(data.status);
@@ -1017,13 +1321,13 @@
                     parseCronToUI(data.schedule);
                     currentScheduleCron = data.schedule;
                 }
-                
+
                 if (data.next_run) {
                     document.getElementById('nextSyncTime').innerText = formatDate(data.next_run);
                 } else {
                     document.getElementById('nextSyncTime').innerText = '--';
                 }
-                
+
                 if (data.next_run) {
                     document.getElementById('nextSyncTime').innerText = formatDate(data.next_run);
                 } else {
@@ -1051,7 +1355,7 @@
                         if (typeof updateDNPreview === 'function') updateDNPreview();
                     }
                 }
-                
+
                 if (data.logs && Array.isArray(data.logs)) {
                     if (JSON.stringify(data.logs) !== JSON.stringify(logsList || []) || isFirstLoadMember) {
                         isFirstLoadMember = false;
@@ -1059,7 +1363,7 @@
                         const isNewLogAtTop = currentList.length > 0 && data.logs[0] !== currentList[0];
                         logsList = data.logs;
                         rebuildLogsUI(logsContainer, logsList, activeLog, 'member');
-                        
+
                         // Open latest log on initial load if none active
                         if (!activeLog && logsList && logsList.length > 0) {
                             toggleLog(logsList[0]);
@@ -1068,7 +1372,7 @@
                             toggleLog(logsList[0]);
                         }
                     }
-                    
+
                     // Periodically refresh the open log if a sync is active
                     if (data.status && data.status.status === 'Running' && activeLog) {
                         fetchLog(activeLog, true);
@@ -1079,8 +1383,8 @@
                 const statusText = document.getElementById('statusText');
                 if (statusText) statusText.innerText = 'Member Sync: Error';
                 const ind = document.getElementById('statusIndicator');
-                if(ind) {
-                   ind.className = 'w-1.5 h-1.5 rounded-full bg-red-500';
+                if (ind) {
+                    ind.className = 'w-1.5 h-1.5 rounded-full bg-red-500';
                 }
             }
         };
@@ -1094,13 +1398,13 @@
                     const emailEl = document.getElementById('userEmail');
                     const initialEl = document.getElementById('userInitial');
                     const profileEl = document.getElementById('userProfile');
-                    
+
                     if (nameEl) nameEl.innerText = user.name || 'User';
                     if (emailEl) emailEl.innerText = user.email || '';
                     if (initialEl) initialEl.innerText = (user.name || 'U').charAt(0).toUpperCase();
                     if (profileEl) profileEl.classList.remove('hidden');
-                    
-                     if (user.is_sso) {
+
+                    if (user.is_sso) {
                         const trigger = document.getElementById('localSettingsTrigger');
                         if (trigger) trigger.classList.remove('hidden');
                     }
@@ -1146,7 +1450,7 @@
 
         // Populate the hour dropdown (12 AM – 11 PM)
         for (let h = 0; h < 24; h++) {
-            const lbl = h === 0 ? '12:00 AM' : h < 12 ? `${h}:00 AM` : h === 12 ? '12:00 PM' : `${h-12}:00 PM`;
+            const lbl = h === 0 ? '12:00 AM' : h < 12 ? `${h}:00 AM` : h === 12 ? '12:00 PM' : `${h - 12}:00 PM`;
             schedHour.insertAdjacentHTML('beforeend', `<option value="${h}">${lbl}</option>`);
         }
 
@@ -1154,12 +1458,12 @@
             const freq = schedFrequency.value;
             schedDay.innerHTML = '';
             if (freq === 'weekly') {
-                const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+                const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
                 days.forEach((d, i) => schedDay.insertAdjacentHTML('beforeend', `<option value="${i}">${d}</option>`));
                 schedDay.classList.remove('hidden');
             } else if (freq === 'monthly') {
                 for (let d = 1; d <= 28; d++) {
-                    const suffix = d===1?'st':d===2?'nd':d===3?'rd':'th';
+                    const suffix = d === 1 ? 'st' : d === 2 ? 'nd' : d === 3 ? 'rd' : 'th';
                     schedDay.insertAdjacentHTML('beforeend', `<option value="${d}">${d}${suffix}</option>`);
                 }
                 schedDay.classList.remove('hidden');
@@ -1173,8 +1477,8 @@
             const hour = schedHour.value;
             const day = schedDay.value;
             // Azure-style 6-field: sec min hour day month dow
-            if (freq === 'daily')   return `0 0 ${hour} * * *`;
-            if (freq === 'weekly')  return `0 0 ${hour} * * ${day}`;
+            if (freq === 'daily') return `0 0 ${hour} * * *`;
+            if (freq === 'weekly') return `0 0 ${hour} * * ${day}`;
             if (freq === 'monthly') return `0 0 ${hour} ${day} * *`;
             return `0 0 ${hour} * * *`;
         }
@@ -1204,8 +1508,8 @@
 
 
         schedFrequency.addEventListener('change', () => { populateDayDropdown(); });
-        schedDay.addEventListener('change', () => {});
-        schedHour.addEventListener('change', () => {});
+        schedDay.addEventListener('change', () => { });
+        schedHour.addEventListener('change', () => { });
         populateDayDropdown(); // initial render
 
         // ── Donation Sync Scheduling ──────────────────────────────────────
@@ -1215,7 +1519,7 @@
         const donSchedAtLabel = document.getElementById('donSchedAtLabel');
 
         for (let h = 0; h < 24; h++) {
-            const lbl = h === 0 ? '12:00 AM' : h < 12 ? `${h}:00 AM` : h === 12 ? '12:00 PM' : `${h-12}:00 PM`;
+            const lbl = h === 0 ? '12:00 AM' : h < 12 ? `${h}:00 AM` : h === 12 ? '12:00 PM' : `${h - 12}:00 PM`;
             donSchedHour.insertAdjacentHTML('beforeend', `<option value="${h}">${lbl}</option>`);
         }
 
@@ -1223,14 +1527,14 @@
             const freq = donSyncFreq.value;
             donSchedDay.innerHTML = '';
             if (freq === 'weekly') {
-                const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+                const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
                 days.forEach((d, i) => donSchedDay.insertAdjacentHTML('beforeend', `<option value="${i}">${d}</option>`));
                 donSchedDay.classList.remove('hidden');
                 donSchedAtLabel.classList.remove('hidden');
                 donSchedHour.classList.remove('hidden');
             } else if (freq === 'monthly') {
                 for (let d = 1; d <= 28; d++) {
-                    const suffix = d===1?'st':d===2?'nd':d===3?'rd':'th';
+                    const suffix = d === 1 ? 'st' : d === 2 ? 'nd' : d === 3 ? 'rd' : 'th';
                     donSchedDay.insertAdjacentHTML('beforeend', `<option value="${d}">${d}${suffix}</option>`);
                 }
                 donSchedDay.classList.remove('hidden');
@@ -1255,8 +1559,8 @@
             if (freq === 'manual') return 'manual';
             const hour = donSchedHour.value;
             const day = donSchedDay.value;
-            if (freq === 'daily')   return `0 0 ${hour} * * *`;
-            if (freq === 'weekly')  return `0 0 ${hour} * * ${day}`;
+            if (freq === 'daily') return `0 0 ${hour} * * *`;
+            if (freq === 'weekly') return `0 0 ${hour} * * ${day}`;
             if (freq === 'monthly') return `0 0 ${hour} ${day} * *`;
             return 'manual';
         }
@@ -1326,7 +1630,7 @@
                     btn.innerHTML = origHTML;
                     btn.disabled = false;
                 }
-            } catch(e) {
+            } catch (e) {
                 console.error(e);
                 alert('Connection error while saving settings.');
                 btn.innerHTML = origHTML;
@@ -1395,7 +1699,7 @@
                 const res = await fetch('/api/members');
                 memberData = await res.json();
                 renderMemberTable();
-            } catch(e) {
+            } catch (e) {
                 console.error('Failed to fetch members:', e);
             }
         }
@@ -1405,10 +1709,10 @@
                 return '<span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-cyan-500/15 text-cyan-400 border border-cyan-500/20">DONATION</span>';
             }
             const badges = {
-                'UPDATED':   '<span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-500/15 text-amber-400">UPDATED</span>',
-                'CREATED':   '<span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/15 text-emerald-400">CREATED</span>',
+                'UPDATED': '<span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-500/15 text-amber-400">UPDATED</span>',
+                'CREATED': '<span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/15 text-emerald-400">CREATED</span>',
                 'NO_CHANGE': '<span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-500/15 text-slate-400">NO CHANGE</span>',
-                'ERROR':     '<span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-red-500/15 text-red-400">ERROR</span>',
+                'ERROR': '<span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-red-500/15 text-red-400">ERROR</span>',
             };
             return badges[action] || `<span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-500/15 text-slate-400">${action}</span>`;
         }
@@ -1437,7 +1741,7 @@
                 const lastName = nameParts.length > 1 ? nameParts[nameParts.length - 1] : '';
 
                 return {
-                    id, 
+                    id,
                     name: m.name,
                     firstName,
                     lastName,
@@ -1468,7 +1772,7 @@
                     valA = a.lastEvent ? new Date(a.lastEvent.date).getTime() : 0;
                     valB = b.lastEvent ? new Date(b.lastEvent.date).getTime() : 0;
                 }
-                
+
                 if (valA < valB) return -1 * memberSortOrder;
                 if (valA > valB) return 1 * memberSortOrder;
                 return 0;
@@ -1512,7 +1816,7 @@
             document.getElementById('modalMemberName').textContent = m.name;
             document.getElementById('modalMemberID').textContent = `PC ID: ${pcId}`;
             const timeline = document.getElementById('modalTimeline');
-            
+
             // Show loading state
             timeline.innerHTML = '<p class="text-slate-500 text-sm py-4 animate-pulse">Loading unified history...</p>';
             document.getElementById('memberModal').classList.remove('hidden');
@@ -1529,16 +1833,14 @@
                         <div class="relative border-l-2 border-slate-700/50 ml-2 space-y-0">
                             ${events.map(ev => `
                                 <div class="relative pl-6 pb-5">
-                                    <div class="absolute left-[-5px] top-1.5 w-2.5 h-2.5 rounded-full ${
-                                        ev.action === 'UPDATED' ? 'bg-amber-400' :
-                                        ev.action === 'CREATED' ? 'bg-emerald-400' :
-                                        ev.action === 'ERROR'   ? 'bg-red-400' : 'bg-slate-500'
-                                    }"></div>
+                                    <div class="absolute left-[-5px] top-1.5 w-2.5 h-2.5 rounded-full ${ev.action === 'UPDATED' ? 'bg-amber-400' :
+                            ev.action === 'CREATED' ? 'bg-emerald-400' :
+                                ev.action === 'ERROR' ? 'bg-red-400' : 'bg-slate-500'
+                        }"></div>
                                     <div class="flex items-center gap-2 mb-1">
-                                        <span class="px-1.5 py-0.5 rounded text-[8px] uppercase font-bold tracking-wider ${
-                                            ev.type === 'DONATION' ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/20' : 
-                                            'bg-slate-500/10 text-slate-400 border border-slate-500/20'
-                                        }">
+                                        <span class="px-1.5 py-0.5 rounded text-[8px] uppercase font-bold tracking-wider ${ev.type === 'DONATION' ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/20' :
+                            'bg-slate-500/10 text-slate-400 border border-slate-500/20'
+                        }">
                                             ${ev.type || 'SYNC'}
                                         </span>
                                         ${getActionBadge(ev.action)}
@@ -1572,7 +1874,7 @@
                 console.error('Error fetching member history:', err);
                 timeline.innerHTML = '<p class="text-red-400 text-sm py-4">Error loading history. Please try again.</p>';
             }
-            
+
             lucide.createIcons();
         }
 
@@ -1602,7 +1904,7 @@
                 const dot = document.getElementById('donStatusDot');
                 const text = document.getElementById('donStatusText');
                 const statusLabel = 'Donation Sync: ';
-                
+
                 text.className = 'text-[11px] font-bold uppercase tracking-wider text-right transition-colors duration-500';
                 dot.className = 'w-1.5 h-1.5 rounded-full transition-all duration-500';
 
@@ -1638,12 +1940,12 @@
 
                 // Last sync info
                 document.getElementById('donStartTime').textContent = formatDate(state.start_time);
-                
+
                 if (state.duration_seconds !== undefined && state.duration_seconds !== null) {
                     const mins = Math.floor(state.duration_seconds / 60);
                     const secs = state.duration_seconds % 60;
-                    document.getElementById('donDuration').textContent = mins > 0 
-                        ? `${mins}m ${secs}s` 
+                    document.getElementById('donDuration').textContent = mins > 0
+                        ? `${mins}m ${secs}s`
                         : `${secs}s`;
                 } else {
                     document.getElementById('donDuration').textContent = '--';
@@ -1669,19 +1971,19 @@
                     const isNewLogAtTop = currentList.length > 0 && logs[0] !== currentList[0];
                     donationLogsList = logs;
                     rebuildLogsUI(donationsLogsContainer, donationLogsList, activeDonationLog, 'donation');
-                    
+
                     if (!activeDonationLog && logs && logs.length > 0) {
                         toggleDonationLog(logs[0]);
                     } else if (isNewLogAtTop && status.status === 'Running') {
                         toggleDonationLog(logs[0]);
                     }
                 }
-                
+
                 // Periodically refresh the open log if a sync is active
                 if (status.status === 'Running' && activeDonationLog) {
                     fetchLog(activeDonationLog, true);
                 }
-            } catch(e) {
+            } catch (e) {
                 console.error('Error fetching donation status:', e);
             }
         }
@@ -1698,7 +2000,7 @@
                 const res = await fetch('/api/donations');
                 donationData = await res.json();
                 renderMemberTable(); // Refresh member table to include new donation actions
-            } catch(e) {
+            } catch (e) {
                 console.error('Failed to fetch donations:', e);
             }
         }
@@ -1710,7 +2012,7 @@
 
             document.getElementById('modalMemberName').innerText = data.donor_name;
             document.getElementById('modalMemberID').innerText = `QB Transaction ID: ${txnId}`;
-            
+
             // Re-using the member modal for now, but without the timeline.
             // The timeline is specific to member history.
             document.getElementById('modalTimeline').innerHTML = '<p class="text-slate-500 text-sm py-4">No detailed transaction history available here.</p>';
@@ -1732,7 +2034,7 @@
                 const data = await resp.json();
                 if (resp.ok) {
                     text.textContent = 'Sync Running...';
-                    
+
                     // Auto-expand the new log
                     if (data.log_file) {
                         // Wait a bit for the list to be populated via the polling
@@ -1749,69 +2051,68 @@
                         text.textContent = 'Run Donation Sync';
                     }, 3000);
                 }
-            } catch(e) {
+            } catch (e) {
                 text.textContent = 'Error - Retry';
                 btn.disabled = false;
             }
         }
 
+        let qbItems = [];
+
         async function loadDonationSettings() {
             try {
-                // Fetch PCO Funds and QB Entities
-                await Promise.all([fetchPCOFunds(), fetchQBAccountsItems()]);
+                // Fetch QB Items and PCO Funds first
+                const [settingsRes, qbRes, pcoRes] = await Promise.all([
+                    fetch('/api/donation-sync-settings'),
+                    fetch('/api/qb-items'),
+                    fetch('/api/pco-funds')
+                ]);
 
-                // Populate QB entities datalist
-                const datalist = document.getElementById('qbEntitiesList');
-                if (datalist && Array.isArray(qbAccountsItems)) {
-                    datalist.innerHTML = qbAccountsItems.map(e => `<option value="${e.name}">(${e.type})</option>`).join('');
-                } else if (datalist) {
-                    datalist.innerHTML = '';
-                    if (qbAccountsItems && qbAccountsItems.error) {
-                        console.error('QB Entities Error:', qbAccountsItems.error);
-                    }
-                }
+                const settings = await settingsRes.json();
+                qbItems = await qbRes.json();
+                pcoFunds = await pcoRes.json();
 
                 // Populate Default Fund Dropdown
-                const defaultFundSelect = document.getElementById('donDefaultFund');
-                if (Array.isArray(pcoFunds)) {
-                    defaultFundSelect.innerHTML = pcoFunds.map(f => 
-                        `<option value="${f.name}">${f.name}</option>`
-                    ).join('');
-                } else {
-                    defaultFundSelect.innerHTML = `<option value="">Error loading funds</option>`;
-                    if (pcoFunds && pcoFunds.error) {
-                        console.error('PCO Funds Error:', pcoFunds.error);
-                    }
+                const donDefaultFund = document.getElementById('donDefaultFund');
+                donDefaultFund.innerHTML = (Array.isArray(pcoFunds) ? pcoFunds : []).map(f =>
+                    `<option value="${f.name}" ${f.name === settings.default_fund_name ? 'selected' : ''}>${f.name}</option>`
+                ).join('');
+
+                // Populate basic settings
+                document.getElementById('donTxnType').value = settings.transaction_type || 'SalesReceipt';
+                document.getElementById('donLookback').value = settings.lookback_days || 30;
+                document.getElementById('donConfirmEmail').value = settings.confirmation_email || '';
+                document.getElementById('donAutoMap').checked = settings.auto_map_funds || false;
+                
+                if (settings.sync_frequency && typeof setupDonCronUI === 'function') {
+                     setupDonCronUI(settings.sync_frequency);
                 }
 
-                const resp = await fetch('/api/donation-sync-settings');
-                donationSettings = await resp.json();
-
-                document.getElementById('donTxnType').value = donationSettings.transaction_type || 'SalesReceipt';
-                document.getElementById('donDefaultFund').value = donationSettings.default_fund_name || 'General Fund';
-                document.getElementById('donLookback').value = donationSettings.lookback_days || 30;
-                
-                // Use the new cron parser for donations
-                parseDonCronToUI(donationSettings.sync_frequency || 'manual');
-
-                if (donationSettings.next_run) {
-                    document.getElementById('donNextSync').innerText = formatDate(donationSettings.next_run);
+                if (settings.next_run) {
+                    document.getElementById('donNextSync').innerText = formatDate(settings.next_run);
                 } else {
                     document.getElementById('donNextSync').innerText = '--';
                 }
-                
-                document.getElementById('donConfirmEmail').value = donationSettings.confirmation_email || '';
 
-                // Render fund mapping
-                const mapping = donationSettings.fund_mapping || {};
+                // Clear and populate mapping
                 const container = document.getElementById('fundMappingContainer');
                 container.innerHTML = '';
+                
+                const mapping = settings.product_service_map || settings.fund_mapping || {};
                 Object.entries(mapping).forEach(([qbName, pcoName]) => {
                     addFundMappingRow(qbName, pcoName);
                 });
+
+                if (Object.keys(mapping).length === 0) {
+                    addFundMapping(); // Add one empty row by default if nothing exists
+                }
+
                 lucide.createIcons();
-            } catch(e) {
+            } catch (e) {
                 console.error('Error loading donation settings:', e);
+                if (typeof showToast === 'function') {
+                    showToast('Failed to load session/entity data from QuickBooks. Ensure QB is connected.', 'error');
+                }
             }
         }
 
@@ -1823,19 +2124,29 @@
         function addFundMappingRow(qbName, pcoName) {
             const container = document.getElementById('fundMappingContainer');
             const row = document.createElement('div');
-            row.className = 'flex items-center gap-2';
-            
-            const options = Array.isArray(pcoFunds) ? pcoFunds.map(f => 
+            row.className = 'grid grid-cols-[1fr,24px,1fr,40px] items-center gap-3 animate-in fade-in slide-in-from-left-2 duration-200';
+
+            const qbOptions = Array.isArray(qbItems) ? qbItems.map(itm =>
+                `<option value="${itm.name}" ${itm.name === qbName ? 'selected' : ''}>${itm.name}</option>`
+            ).join('') : `<option value="">(No Items Found)</option>`;
+
+            const pcoOptions = Array.isArray(pcoFunds) ? pcoFunds.map(f =>
                 `<option value="${f.name}" ${f.name === pcoName ? 'selected' : ''}>${f.name}</option>`
             ).join('') : `<option value="">(Error)</option>`;
 
             row.innerHTML = `
-                <input type="text" list="qbEntitiesList" placeholder="QB Account/Item" value="${qbName}" class="fund-qb flex-1 bg-slate-900/50 border border-slate-700/50 rounded-lg px-3 py-2 text-sm text-slate-300 focus:outline-none focus:border-indigo-500 transition-colors">
-                <i data-lucide="arrow-right" class="w-4 h-4 text-slate-500 shrink-0"></i>
-                <select class="fund-pco flex-1 bg-slate-900/50 border border-slate-700/50 rounded-lg px-3 py-2 text-sm text-slate-300 focus:outline-none focus:border-indigo-500 transition-colors">
-                    ${options}
+                <select class="fund-qb w-full bg-slate-900/50 border border-slate-700/50 rounded-xl px-3 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-indigo-500 transition-all">
+                    <option value="" disabled ${!qbName ? 'selected' : ''}>Select QB Item...</option>
+                    ${qbOptions}
                 </select>
-                <button onclick="this.parentElement.remove()" class="p-1.5 rounded-lg hover:bg-red-900/30 text-slate-500 hover:text-red-400 transition-colors shrink-0">
+                <div class="flex justify-center">
+                    <i data-lucide="arrow-right" class="w-4 h-4 text-slate-600"></i>
+                </div>
+                <select class="fund-pco w-full bg-slate-900/50 border border-slate-700/50 rounded-xl px-3 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-indigo-500 transition-all">
+                    <option value="" disabled ${!pcoName ? 'selected' : ''}>Select PCO Fund...</option>
+                    ${pcoOptions}
+                </select>
+                <button onclick="this.parentElement.remove()" class="p-2.5 rounded-xl bg-slate-800/50 hover:bg-rose-900/20 text-slate-500 hover:text-rose-400 transition-all border border-transparent hover:border-rose-500/20">
                     <i data-lucide="trash-2" class="w-4 h-4"></i>
                 </button>
             `;
@@ -1851,9 +2162,13 @@
             // Collect fund mapping
             const fundMapping = {};
             document.querySelectorAll('#fundMappingContainer > div').forEach(row => {
-                const qb = row.querySelector('.fund-qb').value.trim();
-                const pco = row.querySelector('.fund-pco').value.trim();
-                if (qb && pco) fundMapping[qb] = pco;
+                const qbSelect = row.querySelector('.fund-qb');
+                const pcoSelect = row.querySelector('.fund-pco');
+                if (qbSelect && pcoSelect) {
+                    const qb = qbSelect.value.trim();
+                    const pco = pcoSelect.value.trim();
+                    if (qb && pco) fundMapping[qb] = pco;
+                }
             });
 
             const settings = {
@@ -1862,7 +2177,8 @@
                 lookback_days: parseInt(document.getElementById('donLookback').value) || 30,
                 sync_frequency: buildDonCronFromUI(),
                 confirmation_email: document.getElementById('donConfirmEmail').value.trim(),
-                fund_mapping: fundMapping
+                auto_map_funds: document.getElementById('donAutoMap').checked,
+                product_service_map: fundMapping
             };
 
             try {
@@ -1879,7 +2195,7 @@
                     btn.innerHTML = `<i data-lucide="x" class="w-4 h-4"></i> ${errData.error || 'Save Failed'}`;
                     setTimeout(() => { btn.innerHTML = origHTML; btn.disabled = false; lucide.createIcons(); }, 3500);
                 }
-            } catch(e) {
+            } catch (e) {
                 btn.innerHTML = '<i data-lucide="x" class="w-4 h-4"></i> Error';
                 setTimeout(() => { btn.innerHTML = origHTML; btn.disabled = false; lucide.createIcons(); }, 3500);
             }
@@ -1892,7 +2208,7 @@
         fetchMembers();
         fetchDonations();
         loadDonationSettings();
-        
+
         setInterval(() => {
             fetchStatus();
             fetchDonationStatus();
@@ -1906,7 +2222,7 @@
 
         async function clearLogs(type) {
             if (!confirm(`Are you sure you want to clear all ${type} sync logs? This action cannot be undone.`)) return;
-            
+
             try {
                 const resp = await fetch('/api/logs/clear', {
                     method: 'POST',
@@ -1933,7 +2249,7 @@
         }
 
         async function confirmClearHistory(type) {
-            const warning = type === 'donation' 
+            const warning = type === 'donation'
                 ? "\n\nCRITICAL WARNING: This will reset the record of already-synced transactions. The NEXT SYNC will attempt to re-sync everything!"
                 : "";
             if (!confirm(`Are you sure you want to clear the persistent sync history for ${type}s? This action cannot be undone.${warning}`)) return;
@@ -1964,33 +2280,36 @@
 
         let localLoginEnabled = true;
 
-        async function openLocalSettings() {
+        function openRefreshTokenHelp() {
+            document.getElementById('refreshTokenHelpModal').classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeRefreshTokenHelp() {
+            document.getElementById('refreshTokenHelpModal').classList.add('hidden');
+            document.body.style.overflow = '';
+        }
+
+        async function loadLocalAdminSettings() {
             try {
                 const resp = await fetch('/api/auth/local-settings');
                 const data = await resp.json();
                 localLoginEnabled = data.enabled;
                 updateLocalToggleUI();
                 
-                const newPassInput = document.getElementById('newLocalPassword');
-                const confirmPassInput = document.getElementById('confirmLocalPassword');
+                // Clear password fields on load
+                const newPassInput = document.getElementById('settingsNewLocalPassword');
+                const confirmPassInput = document.getElementById('settingsConfirmLocalPassword');
                 if (newPassInput) newPassInput.value = '';
                 if (confirmPassInput) confirmPassInput.value = '';
-                
-                document.getElementById('localSettingsModal').classList.remove('hidden');
-                document.body.style.overflow = 'hidden';
             } catch (err) {
-                showToast('Failed to load local admin settings', 'error');
+                console.error('Failed to load local admin settings:', err);
             }
         }
 
-        function closeLocalSettings() {
-            document.getElementById('localSettingsModal').classList.add('hidden');
-            document.body.style.overflow = '';
-        }
-
         function updateLocalToggleUI() {
-            const btn = document.getElementById('localLoginToggle');
-            const dot = document.getElementById('localLoginToggleDot');
+            const btn = document.getElementById('settingsLocalLoginToggle');
+            const dot = document.getElementById('settingsLocalLoginToggleDot');
             if (localLoginEnabled) {
                 btn.classList.replace('bg-slate-700', 'bg-emerald-500');
                 dot.classList.replace('translate-x-1', 'translate-x-6');
@@ -2006,17 +2325,17 @@
         }
 
         async function saveLocalSettings() {
-            const newPass = document.getElementById('newLocalPassword').value;
-            const confirmPass = document.getElementById('confirmLocalPassword').value;
-            
+            const newPass = document.getElementById('settingsNewLocalPassword').value;
+            const confirmPass = document.getElementById('settingsConfirmLocalPassword').value;
+
             if (newPass && newPass !== confirmPass) {
-                alert('Passwords do not match!');
+                showToast('Passwords do not match!', 'error');
                 return;
             }
 
-            const btn = document.getElementById('saveLocalSettingsBtn');
+            const btn = document.getElementById('saveAdminSettingsBtn');
             const origHTML = btn.innerHTML;
-            btn.innerHTML = '<i data-lucide="loader" class="w-4 h-4 animate-spin mx-auto"></i>';
+            btn.innerHTML = '<i data-lucide="loader" class="w-4 h-4 animate-spin"></i> Saving...';
             btn.disabled = true;
 
             try {
@@ -2025,18 +2344,21 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         enabled: localLoginEnabled,
-                        new_password: newPass
+                        new_password: newPass || null
                     })
                 });
+
                 if (resp.ok) {
-                    showToast('Local admin settings updated successfully', 'success');
-                    closeLocalSettings();
+                    showToast('Admin settings updated successfully', 'success');
+                    // Clear password fields
+                    document.getElementById('settingsNewLocalPassword').value = '';
+                    document.getElementById('settingsConfirmLocalPassword').value = '';
                 } else {
                     const data = await resp.json();
                     showToast(data.error || 'Failed to update settings', 'error');
                 }
-            } catch (e) {
-                showToast('Connection error updating settings', 'error');
+            } catch (err) {
+                showToast('Network error updating settings', 'error');
             } finally {
                 btn.innerHTML = origHTML;
                 btn.disabled = false;
@@ -2065,7 +2387,7 @@
             const btn = document.getElementById('saveQBCredsBtn');
             const feedback = document.getElementById('qbSavedFeedback');
             const origHTML = btn.innerHTML;
-            
+
             btn.disabled = true;
             btn.innerHTML = '<i data-lucide="loader" class="w-4 h-4 animate-spin"></i> Saving...';
             lucide.createIcons();
@@ -2089,7 +2411,7 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                 });
-                
+
                 if (res.ok) {
                     feedback.classList.remove('hidden');
                     setTimeout(() => feedback.classList.add('hidden'), 3000);
@@ -2123,67 +2445,174 @@
             }
             lucide.createIcons();
         }
+
+        // Global Toast Notification System
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toastContainer');
+            if (!container) return;
+
+            const toast = document.createElement('div');
+            toast.className = `toast border-l-4 ${type === 'success' ? 'border-emerald-500' : 'border-rose-500'}`;
+            
+            const iconName = type === 'success' ? 'check-circle' : 'alert-circle';
+            const iconColor = type === 'success' ? 'text-emerald-400' : 'text-rose-400';
+            
+            toast.innerHTML = `
+                <i data-lucide="${iconName}" class="w-5 h-5 ${iconColor} shrink-0"></i>
+                <div class="flex-1">
+                    <p class="text-sm font-medium text-slate-200">${message}</p>
+                </div>
+                <button onclick="this.parentElement.classList.add('toast-out'); setTimeout(() => this.parentElement.remove(), 300)" class="text-slate-500 hover:text-slate-300">
+                    <i data-lucide="x" class="w-4 h-4"></i>
+                </button>
+            `;
+            
+            container.appendChild(toast);
+            lucide.createIcons();
+
+            setTimeout(() => {
+                toast.classList.add('toast-out');
+                setTimeout(() => toast.remove(), 300);
+            }, 5000);
+        }
+
+        // --- Environment Configuration Dashboard ---
+
+        function toggleCard(id) {
+            const content = document.getElementById(id);
+            const icon = document.getElementById('icon-' + id);
+            content.classList.toggle('expanded');
+            icon.classList.toggle('expanded');
+        }
+
+        let currentConfig = {};
+
+        async function loadEnvironmentConfig() {
+            try {
+                const res = await fetch('/api/config');
+                const data = await res.json();
+                currentConfig = data;
+
+                Object.keys(data).forEach(section => {
+                    const container = document.getElementById('env-' + section);
+                    if (!container) return;
+                    
+                    container.innerHTML = '';
+                    const sectionData = data[section];
+                    
+                    Object.keys(sectionData).sort().forEach(key => {
+                        const field = sectionData[key];
+                        const val = (typeof field === 'object' && field !== null) ? field.value : field;
+                        const hint = (typeof field === 'object' && field !== null) ? field.hint : '';
+                        const isSensitive = val.includes('...') || val === '********';
+                        
+                        const div = document.createElement('div');
+                        div.className = 'space-y-1.5';
+                        div.innerHTML = `
+                            <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">${key.replace(/_/g, ' ')}</label>
+                            <div class="relative">
+                                <input type="${isSensitive ? 'password' : 'text'}" 
+                                       id="input-${key}" 
+                                       value="${val}"
+                                       class="w-full bg-slate-900/50 border border-slate-700/50 rounded-xl px-4 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-indigo-500 transition-colors ${isSensitive ? 'pr-10' : ''}"
+                                       placeholder="Enter ${key}">
+                                ${isSensitive ? `
+                                    <button onclick="togglePassword('input-${key}')" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300">
+                                        <i data-lucide="eye" class="w-4 h-4"></i>
+                                    </button>
+                                ` : ''}
+                            </div>
+                            ${hint ? `<p class="text-[10px] text-slate-500 leading-tight px-1">${hint}</p>` : ''}
+                        `;
+                        container.appendChild(div);
+                    });
+                });
+                lucide.createIcons();
+            } catch (err) {
+                console.error('Failed to load config:', err);
+                showToast('Failed to load system configuration.', 'error');
+            }
+        }
+
+        async function saveEnvSection(section) {
+            const container = document.getElementById('env-' + section);
+            const inputs = container.querySelectorAll('input');
+            const updates = {};
+            
+            inputs.forEach(input => {
+                const key = input.id.replace('input-', '');
+                updates[key] = input.value;
+            });
+
+            try {
+                const res = await fetch('/api/config', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(updates)
+                });
+                const result = await res.json();
+                
+                if (result.success) {
+                    showToast(`${section.toUpperCase()} settings saved successfully.`);
+                    if (result.message) console.log(result.message);
+                } else {
+                    showToast(result.error || 'Failed to save settings.', 'error');
+                }
+            } catch (err) {
+                console.error('Save error:', err);
+                showToast('An error occurred while saving.', 'error');
+            }
+        }
     </script>
-    <!-- Local Admin Settings Modal -->
-    <div id="localSettingsModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
-        <div class="glass-card w-full max-w-md rounded-3xl overflow-hidden animate-in fade-in zoom-in duration-300">
+    <div id="toastContainer" class="toast-container"></div>
+    <!-- Refresh Token Help Modal -->
+    <div id="refreshTokenHelpModal"
+        class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+        <div class="glass-card w-full max-w-lg rounded-3xl overflow-hidden animate-in fade-in zoom-in duration-300">
             <div class="p-6 border-b border-slate-800/50 flex items-center justify-between">
                 <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 bg-amber-500/10 rounded-xl flex items-center justify-center border border-amber-500/20">
-                        <i data-lucide="shield-check" class="w-5 h-5 text-amber-400"></i>
+                    <div class="w-10 h-10 bg-indigo-500/10 rounded-xl flex items-center justify-center border border-indigo-500/20">
+                        <i data-lucide="help-circle" class="w-5 h-5 text-indigo-400"></i>
                     </div>
                     <div>
-                        <h2 class="text-lg font-bold text-slate-100">Local Admin Settings</h2>
-                        <p class="text-xs text-slate-500 font-medium">Secondary access management</p>
+                        <h2 class="text-lg font-bold text-slate-100">Refresh Token Guide</h2>
+                        <p class="text-xs text-slate-500 font-medium">How to generate a new authentication token</p>
                     </div>
                 </div>
-                <button onclick="closeLocalSettings()" class="p-2 rounded-xl hover:bg-slate-800 text-slate-500 transition-colors">
+                <button onclick="closeRefreshTokenHelp()"
+                    class="p-2 rounded-xl hover:bg-slate-800 text-slate-500 transition-colors">
                     <i data-lucide="x" class="w-5 h-5"></i>
                 </button>
             </div>
-            <div class="p-8 space-y-8">
-                <!-- Status Toggle -->
-                <div class="flex items-center justify-between">
-                    <div>
-                        <h3 class="text-sm font-bold text-slate-200">Local Admin Login</h3>
-                        <p class="text-[11px] text-slate-500 font-medium mt-0.5">Enable or disable bypass access</p>
-                    </div>
-                    <button id="localLoginToggle" onclick="toggleLocalLogin()" class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none bg-slate-700">
-                        <span id="localLoginToggleDot" class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform translate-x-1"></span>
-                    </button>
-                </div>
-
-                <div class="h-px bg-slate-800/50"></div>
-
-                <!-- Change Password -->
-                <div class="space-y-4">
-                    <div class="flex items-center gap-2">
-                        <i data-lucide="lock" class="w-4 h-4 text-slate-500"></i>
-                        <h3 class="text-sm font-bold text-slate-200">Change Admin Password</h3>
-                    </div>
-                    
-                    <div class="space-y-4">
-                        <div class="space-y-1.5">
-                            <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest pl-1">New Password</label>
-                            <input type="password" id="newLocalPassword" class="w-full bg-slate-900/50 border border-slate-700/50 rounded-xl px-4 py-3 text-sm text-slate-200 focus:outline-none focus:border-indigo-500 transition-colors" placeholder="Leave empty to keep current">
-                        </div>
-                        <div class="space-y-1.5">
-                            <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest pl-1">Confirm Password</label>
-                            <input type="password" id="confirmLocalPassword" class="w-full bg-slate-900/50 border border-slate-700/50 rounded-xl px-4 py-3 text-sm text-slate-200 focus:outline-none focus:border-indigo-500 transition-colors" placeholder="••••••••">
-                        </div>
-                    </div>
+            <div class="p-8 space-y-6">
+                <ol class="text-sm text-slate-400 space-y-4 list-decimal pl-5 leading-relaxed">
+                    <li>Log in to the <a href="https://developer.intuit.com/app/developer/playground"
+                            target="_blank" class="text-indigo-400 hover:underline font-semibold">Intuit OAuth
+                            Playground</a>.</li>
+                    <li>Select your app from the dropdown and check the <code
+                            class="bg-slate-800 px-1.5 py-0.5 rounded text-indigo-300 border border-indigo-500/20">com.intuit.quickbooks.accounting</code>
+                        scope.</li>
+                    <li>Click <strong class="text-slate-200">Get Authorization Code</strong> and log in to authorize access to your company.</li>
+                    <li>Click <strong class="text-slate-200">Get Tokens</strong> to generate a fresh <strong class="text-indigo-400">Refresh Token</strong>.</li>
+                    <li>Copy the refresh token and paste it into the form on the settings page.</li>
+                </ol>
+                
+                <div class="p-4 rounded-2xl bg-indigo-500/5 border border-indigo-500/10 flex gap-3">
+                    <i data-lucide="zap" class="w-5 h-5 text-indigo-400 shrink-0"></i>
+                    <p class="text-xs text-slate-500 leading-relaxed text-balance">
+                        <strong class="text-indigo-400">Pro Tip:</strong> Once established, the server will rotate these tokens automatically. You only need to do this manually if the connection expires or is revoked.
+                    </p>
                 </div>
             </div>
-            <div class="p-6 bg-slate-900/30 border-t border-slate-800/50 flex gap-3">
-                <button onclick="closeLocalSettings()" class="flex-1 py-3 px-4 rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-300 font-semibold text-sm transition-all active:scale-95">
-                    Cancel
-                </button>
-                <button id="saveLocalSettingsBtn" onclick="saveLocalSettings()" class="flex-1 py-3 px-4 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-semibold text-sm transition-all shadow-lg shadow-indigo-900/20 active:scale-95">
-                    Save Changes
+            <div class="p-6 bg-slate-900/30 border-t border-slate-800/50 text-right">
+                <button onclick="closeRefreshTokenHelp()"
+                    class="px-8 py-3 rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-300 font-semibold text-sm transition-all active:scale-95">
+                    Got it
                 </button>
             </div>
         </div>
     </div>
 
 </body>
+
 </html>

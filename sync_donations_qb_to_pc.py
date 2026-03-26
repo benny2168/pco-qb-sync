@@ -146,6 +146,27 @@ class PlanningCenterGivingClient:
         logging.info(f"Loaded {len(funds)} PC Giving funds.")
         return funds
 
+    def create_fund(self, name: str) -> Optional[str]:
+        """Create a new fund in PCO Giving with unlisted visibility."""
+        payload = {
+            "data": {
+                "type": "Fund",
+                "attributes": {
+                    "name": name,
+                    "visibility": "unlisted"
+                }
+            }
+        }
+        try:
+            resp = self._post("/funds", payload)
+            fund_id = resp.get("data", {}).get("id")
+            if fund_id:
+                logging.info(f"Created new PCO Fund: {name} (ID: {fund_id})")
+                return fund_id
+        except Exception as e:
+            logging.error(f"Failed to create PCO Fund '{name}': {e}")
+        return None
+
     # -- People / Donors ----------------------------------------------------
     def find_person_by_id(self, pc_person_id: str) -> Optional[str]:
         """
@@ -374,7 +395,7 @@ class DonationSyncRoutine:
             "transaction_type": "SalesReceipt",
             "lookback_days": 30,
             "default_fund_name": "General Fund",
-            "fund_mapping": {},
+            "product_service_map": {},
             "payment_method_map": {
                 "Cash": "cash",
                 "Check": "check",
@@ -499,31 +520,43 @@ class DonationSyncRoutine:
         return items
 
     def _resolve_fund_id(self, item_name: str, account_name: str, fund_map: Dict[str, str]) -> Optional[str]:
-        """Resolve a PCO fund ID from item/account name using the dynamic fund mapping."""
-        # Priority 1: Check user-defined fund mapping (from web portal)
-        user_mapping = self.settings.get("fund_mapping", {})
-
-        for search_name in [item_name, account_name]:
-            if not search_name:
-                continue
-            # Check exact match in user mapping (case insensitive)
-            mapped_fund = user_mapping.get(search_name)
+        """Resolve a PCO fund ID with priority: Manual Override > Auto-Map/Create > Default Fund."""
+        user_mapping = self.settings.get("product_service_map", {})
+        auto_map_enabled = self.settings.get("auto_map_funds", False)
+        
+        # 1. Manual Override (User-defined product/service mapping)
+        search_names = [n for n in [item_name, account_name] if n]
+        for name in search_names:
+            mapped_fund = user_mapping.get(name)
             if mapped_fund:
-                # Try finding in fund_map (case insensitive)
                 for f_name, f_id in fund_map.items():
                     if f_name.lower() == mapped_fund.lower():
                         return f_id
 
-            # Check direct match in PC funds (case insensitive)
+        # 2. Auto-Map / Match by exact name
+        for name in search_names:
+            # First look for existing fund by exact name
             for f_name, f_id in fund_map.items():
-                if f_name.lower() == search_name.lower():
+                if f_name.lower() == name.lower():
                     return f_id
+            
+            # If enabled, create a new fund
+            if auto_map_enabled:
+                new_id = self.pco.create_fund(name)
+                if new_id:
+                    # Update local cache to prevent duplicate creations in same run
+                    fund_map[name] = new_id
+                    return new_id
 
-        # Fallback to default fund (case insensitive)
+        # 3. Fallback to default fund (case insensitive)
         default_name = self.settings.get("default_fund_name", "General Fund")
         for f_name, f_id in fund_map.items():
             if f_name.lower() == default_name.lower():
                 return f_id
+        
+        # 4. Absolute fallback: first fund in the list
+        if fund_map:
+            return list(fund_map.values())[0]
         return None
 
     # -- Main sync ---------------------------------------------------------

@@ -129,39 +129,124 @@ def robust_save_file(path, content, is_json=True, retries=5, delay=0.1):
 def save_json_with_retries(path, data, retries=5, delay=0.1):
     return robust_save_file(path, data, is_json=True, retries=retries, delay=delay)
 
-def update_env_file(key, value):
-    """Update or add a key-value pair in the .env file without using atomic rename,
-    to avoid 'Device or resource busy' errors on Docker volume-mounted files.
-    """
-    lines = []
-    if os.path.exists(ENV_PATH):
-        with open(ENV_PATH, 'r') as f:
-            lines = f.readlines()
+def update_env_file_bulk(updates):
+    """Update or add multiple key-value pairs in the .env file while preserving comments."""
+    if not os.path.exists(ENV_PATH):
+        # Create empty .env if missing
+        with open(ENV_PATH, 'w') as f:
+            pass
+            
+    with open(ENV_PATH, 'r') as f:
+        lines = f.readlines()
     
-    found = False
+    # Track which keys we've already found in the file
+    processed_keys = set()
     new_lines = []
+    
     for line in lines:
-        if line.startswith(f"{key}="):
-            new_lines.append(f"{key}='{value}'\n")
-            found = True
-        else:
+        stripped = line.strip()
+        if not stripped or stripped.startswith('#'):
             new_lines.append(line)
-    
-    if not found:
-        new_lines.append(f"{key}='{value}'\n")
-    
+            continue
+            
+        parts = stripped.split('=', 1)
+        if len(parts) == 2:
+            key = parts[0].strip()
+            if key in updates:
+                new_lines.append(f"{key}='{updates[key]}'\n")
+                processed_keys.add(key)
+                continue
+        new_lines.append(line)
+        
+    # Add any new keys that weren't in the file
+    for key, value in updates.items():
+        if key not in processed_keys:
+            new_lines.append(f"{key}='{value}'\n")
+            
     if robust_save_file(ENV_PATH, "".join(new_lines), is_json=False):
-        logging.info(f"Successfully updated {key} in {ENV_PATH}")
         # Reload immediately
         load_dotenv(dotenv_path=ENV_PATH, override=True)
         return True
-    else:
-        logging.error(f"Failed to update {key} in {ENV_PATH}")
-        return False
+def update_env_file(key, value):
+    """Compatibility wrapper for single key updates."""
+    return update_env_file_bulk({key: value})
+
+def mask_value(val):
+    if not val: return ""
+    if len(val) <= 12: return "********"
+    return f"{val[:6]}...{val[-6:]}"
+
+SENSITIVE_KEYS = [
+    'PCO_PAT', 'PCO_APP_ID', 'QB_CLIENT_ID', 'QB_CLIENT_SECRET', 'QB_REFRESH_TOKEN',
+    'SMTP_PASSWORD', 'AZURE_CLIENT_SECRET', 'FLASK_SECRET_KEY'
+]
+
+# Ensure a secure secret key exists
+if not os.getenv('FLASK_SECRET_KEY'):
+    import secrets
+    new_key = secrets.token_hex(32)
+    logging.info("FLASK_SECRET_KEY missing. Generating a new secure key...")
+    update_env_file_bulk({'FLASK_SECRET_KEY': new_key})
+    os.environ['FLASK_SECRET_KEY'] = new_key
+
+CONFIG_HINTS = {
+    'PCO_PAT': 'Personal Access Token from PCO Developer Settings',
+    'PCO_APP_ID': 'Application ID for your custom PCO integration',
+    'PCO_LIST_ID': 'The ID of the PCO List to sync (e.g. 4661587)',
+    'QB_CLIENT_ID': 'QuickBooks Developer Portal Client ID',
+    'QB_CLIENT_SECRET': 'QuickBooks Developer Portal Client Secret',
+    'QB_REFRESH_TOKEN': 'Rotating OAuth token (updated automatically)',
+    'QB_REALM_ID': 'Company ID found in QuickBooks Account Settings',
+    'SMTP_SERVER': 'Hostname of your email provider (e.g. smtp.gmail.com)',
+    'SMTP_PORT': 'Port number (usually 587 for STARTTLS)',
+    'SMTP_SENDER_EMAIL': 'The email address used to send sync reports',
+    'SMTP_PASSWORD': 'SMTP Authentication Password',
+    'SMTP_RECIPIENT_EMAIL': 'Admin email to receive reports',
+    'SYNC_SCHEDULE': 'Cron expression for sync (e.g. 0 0 3 * * 1)',
+    'AZURE_CLIENT_ID': 'Application (client) ID from Azure Portal',
+    'AZURE_TENANT_ID': 'Directory (tenant) ID from Azure Portal',
+    'AZURE_CLIENT_SECRET': 'Client Secret from Azure Portal',
+    'AZURE_GROUP_ID': 'Entra ID Group ID for restricted access',
+    'AZURE_REDIRECT_PATH': 'Callback path (usually /callback)',
+    'AZURE_SCOPE': 'Entra ID Scopes (space separated)',
+    'AZURE_REDIRECT_URI_OVERRIDE': 'Optional production URL override',
+    'FLASK_SECRET_KEY': 'Random string for session security',
+    'LOG_LEVEL': 'Logging detail (INFO, DEBUG, WARNING, ERROR)',
+    'FLASK_PORT': 'Internal port for the web server (default 8080)',
+    'PCO_CONFIG_DIR': 'Absolute path to config folder on host',
+    'PCO_DATA_DIR': 'Absolute path to data folder (auth, history)',
+    'PCO_LOGS_DIR': 'Absolute path to logs folder'
+}
+
 
 app = Flask(__name__, static_folder='static', static_url_path='/static')
 # Handle reverse proxy headers (X-Forwarded-Proto, X-Forwarded-Host)
 app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
+
+@app.after_request
+def add_security_headers(response):
+    """Add standard security headers to all responses."""
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    response.headers['X-Frame-Options'] = 'SAMEORIGIN'
+    response.headers['X-XSS-Protection'] = '1; mode=block'
+    # Recommended: Content-Security-Policy (CSP) - start relaxed if needed
+    # response.headers['Content-Security-Policy'] = "default-src 'self';"
+    return response
+
+def verify_origin(f):
+    """Basic CSRF mitigation: verify request origin matches host."""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if request.method == 'POST':
+            origin = request.headers.get('Origin')
+            host = request.headers.get('Host')
+            # In some setups behind proxies, Host might not match Origin exactly (proto vs no proto)
+            # but we can check if host is part of origin
+            if origin and host not in origin:
+                 logging.warning(f"CSRF Alert: Origin '{origin}' does not match Host '{host}'")
+                 return jsonify({"error": "Forbidden: CSRF protection triggered."}), 403
+        return f(*args, **kwargs)
+    return decorated_function
 
 # Ensure secret key is consistent
 app.config['SECRET_KEY'] = os.getenv('FLASK_SECRET_KEY', 'change-this-to-something-very-secret')
@@ -420,7 +505,9 @@ def authorized():
             logging.warning("User is not a member of the required access group.")
             return "Access Denied: You are not a member of the required access group.", 403
 
-        session["user"] = result.get("id_token_claims")
+        user_claims = result.get("id_token_claims")
+        user_claims["is_sso"] = True
+        session["user"] = user_claims
         logging.info(f"User {session['user'].get('preferred_username')} logged in successfully.")
         return redirect(url_for("index"))
         
@@ -453,8 +540,9 @@ def dashboard_page():
 @app.route('/')
 def index():
     if not session.get('user'):
-        auth_settings = get_auth_settings()
-        return render_template('login.html', local_enabled=auth_settings.get('local_login_enabled', True))
+        auth_settings = get_auth_settings() or {}
+        local_enabled = auth_settings.get('local_login_enabled', True)
+        return render_template('login.html', local_enabled=local_enabled)
     return dashboard_page()
 
 @app.route('/local-login', methods=['GET', 'POST'])
@@ -485,23 +573,38 @@ def local_login():
 
 @app.route('/api/auth/local-settings', methods=['GET', 'POST'])
 @login_required
+@verify_origin
 def api_auth_local_settings():
     """Manage local login settings. Restricted to SSO users."""
-    if not session.get('user', {}).get('is_sso'):
-        return jsonify({"error": "Only SSO-authenticated administrators can manage local login settings."}), 403
+    auth_settings = get_auth_settings() or {}
+    user = session.get('user', {})
+    is_sso = user.get('is_sso', False) or user.get('oid') is not None
+    is_local_admin = not is_sso and user.get('preferred_username') == auth_settings.get('local_admin_user')
     
-    auth_settings = get_auth_settings()
+    if not (is_sso or is_local_admin):
+        logging.warning(f"Unauthorized access attempt to local settings from user: {user.get('preferred_username')}")
+        return jsonify({"error": "Admin privileges required to manage local login settings."}), 403
     
     if request.method == 'POST':
         data = request.json
+        logging.info(f"Received local settings update request: {data}")
+        
         if 'enabled' in data:
             auth_settings['local_login_enabled'] = bool(data['enabled'])
+            logging.info(f"Local login enabled state set to: {auth_settings['local_login_enabled']}")
         
-        if 'new_password' in data and data['new_password']:
-            auth_settings['local_admin_password_hash'] = generate_password_hash(data['new_password'])
+        # Support both 'password' and 'new_password' for robustness, though frontend uses 'new_password'
+        new_pass = data.get('new_password') or data.get('password')
+        if new_pass:
+            auth_settings['local_admin_password_hash'] = generate_password_hash(new_pass)
+            logging.info("Local admin password hash regenerated.")
             
-        save_auth_settings(auth_settings)
-        return jsonify({"success": True, "enabled": auth_settings['local_login_enabled']})
+        if save_auth_settings(auth_settings):
+            logging.info("Auth settings saved successfully to disk.")
+            return jsonify({"success": True, "enabled": auth_settings['local_login_enabled']})
+        else:
+            logging.error("Failed to save auth settings to disk.")
+            return jsonify({"error": "Failed to save settings file."}), 500
     
     return jsonify({
         "enabled": auth_settings.get('local_login_enabled', True),
@@ -570,7 +673,9 @@ def api_status():
 @app.route('/api/logs/<filename>')
 @login_required
 def api_logs(filename):
-    if not filename or not filename.endswith('.log') or '..' in filename:
+    # Sanitize filename and prevent directory traversal
+    filename = os.path.basename(filename)
+    if not filename.endswith('.log'):
         return 'Invalid filename', 400
 
     log_path = os.path.join(BASE_DIR, 'logs', filename)
@@ -582,6 +687,7 @@ def api_logs(filename):
 
 @app.route('/api/sync-now', methods=['POST'])
 @login_required
+@verify_origin
 def api_sync_now():
     try:
         config = load_config()
@@ -599,6 +705,7 @@ def api_sync_now():
 
 @app.route('/api/qb-credentials', methods=['GET', 'POST'])
 @login_required
+@verify_origin
 def api_qb_credentials():
     """Get or set QuickBooks credentials in the .env file."""
     if request.method == 'POST':
@@ -624,6 +731,7 @@ def api_qb_credentials():
 
 @app.route('/api/member-sync-settings', methods=['POST'])
 @login_required
+@verify_origin
 def api_save_member_settings():
     """Consolidated endpoint to save all member sync configuration at once."""
     try:
@@ -709,6 +817,7 @@ def api_donations():
     
 @app.route('/api/logs/clear', methods=['POST'])
 @login_required
+@verify_origin
 def api_clear_logs():
     """Clear historical Member or Donation sync logs from the logs directory."""
     try:
@@ -737,6 +846,7 @@ def api_clear_logs():
 
 @app.route('/api/sync/clear-history', methods=['POST'])
 @login_required
+@verify_origin
 def api_clear_history():
     """Clear persistent sync history files for Members or Donations."""
     try:
@@ -813,6 +923,7 @@ def api_member_history(pc_id):
 # ---------------------------------------------------------------------------
 @app.route('/api/donation-sync-now', methods=['POST'])
 @login_required
+@verify_origin
 def api_donation_sync_now():
     """Trigger a manual donation reverse sync (QB → PCO Giving)."""
     try:
@@ -957,33 +1068,23 @@ def api_get_pco_funds():
         logging.error(f"Failed to fetch PCO funds: {e}")
         return jsonify({"error": str(e)}), 500
 
-@app.route('/api/qb-accounts-items', methods=['GET'])
+@app.route('/api/qb-items', methods=['GET'])
 @login_required
-def api_get_qb_entities():
-    """Fetch all active accounts and items from QuickBooks."""
+def api_get_qb_items():
+    """Fetch all active items (products/services) from QuickBooks."""
     try:
         from sync_pc_to_qb import load_config, QuickBooksClient
         config = load_config()
         qb = QuickBooksClient(config.get('quickbooks', {}))
-        
-        accounts = qb.get_all_accounts()
         items = qb.get_all_items()
-        
-        # Combine into a single list for the frontend
-        # We only need names for the mapping comparison
-        entities = []
-        for acc in accounts:
-            entities.append({"name": acc["name"], "type": "Account"})
-        for itm in items:
-            entities.append({"name": itm["name"], "type": "Item"})
-            
-        return jsonify(entities)
+        return jsonify(items)
     except Exception as e:
-        logging.error(f"Failed to fetch QB entities: {e}")
+        logging.error(f"Failed to fetch QB items: {e}")
         return jsonify({"error": str(e)}), 500
 
 @app.route('/api/donation-sync-settings', methods=['POST'])
 @login_required
+@verify_origin
 def api_save_donation_settings():
     """Save donation sync settings from the web portal."""
     try:
@@ -1002,12 +1103,15 @@ def api_save_donation_settings():
         # Update with new values
         allowed_keys = [
             'transaction_type', 'lookback_days', 'default_fund_name',
-            'fund_mapping', 'payment_method_map', 'sync_frequency',
-            'confirmation_email'
+            'product_service_map', 'payment_method_map', 'sync_frequency',
+            'confirmation_email', 'auto_map_funds'
         ]
         for key in allowed_keys:
             if key in data:
                 existing[key] = data[key]
+            # Migration: if 'fund_mapping' is in data, use it for 'product_service_map'
+            if key == 'product_service_map' and 'fund_mapping' in data:
+                 existing['product_service_map'] = data['fund_mapping']
 
         if save_json_with_retries(settings_path, existing):
             logging.info(f"Successfully saved donation settings to {settings_path}")
@@ -1022,6 +1126,89 @@ def api_save_donation_settings():
     except Exception as e:
         logging.error(f"Failed to save donation settings: {e}")
         return jsonify({"error": str(e)}), 500
+
+# ---------------------------------------------------------------------------
+# Routes — System Configuration
+# ---------------------------------------------------------------------------
+
+@app.route('/api/config', methods=['GET', 'POST'])
+@login_required
+@verify_origin
+def api_config():
+    """Get or update environment configuration."""
+    # Ensure only authorized admins can access
+    user = session.get('user', {})
+    auth_settings = get_auth_settings() or {}
+    is_sso = user.get('is_sso', False) or user.get('oid') is not None
+    is_local_admin = not is_sso and user.get('preferred_username') == auth_settings.get('local_admin_user')
+    
+    if not (is_sso or is_local_admin):
+        return jsonify({"error": "Admin privileges required."}), 403
+
+    if request.method == 'POST':
+        updates = request.json
+        # Filter out masked values
+        clean_updates = {}
+        for k, v in updates.items():
+            if '...' not in str(v) and '***' not in str(v):
+                clean_updates[k] = v
+        
+        if not clean_updates:
+            return jsonify({"success": True, "message": "No changes detected (all values were masked)."})
+            
+        if update_env_file_bulk(clean_updates):
+            # Reload environment for the current process
+            for k, v in clean_updates.items():
+                os.environ[k] = str(v)
+            logging.info(f"Updated .env with: {list(clean_updates.keys())}")
+            return jsonify({"success": True})
+        else:
+            return jsonify({"error": "Failed to save .env file."}), 500
+
+    # GET: Return categorized config
+    config = {}
+    if os.path.exists(ENV_PATH):
+        with open(ENV_PATH, 'r') as f:
+            for line in f:
+                stripped = line.strip()
+                if stripped and not stripped.startswith('#'):
+                    parts = stripped.split('=', 1)
+                    if len(parts) == 2:
+                        key = parts[0].strip()
+                        val = parts[1].strip().strip("'").strip('"')
+                        config[key] = val
+    
+    # Categorize and add hints
+    response_data = {}
+    sections_map = {
+        "pco": lambda k: k.startswith('PCO_'),
+        "qb": lambda k: k.startswith('QB_'),
+        "smtp": lambda k: k.startswith('SMTP_'),
+        "azure": lambda k: k.startswith('AZURE_'),
+        "general": lambda k: k not in SENSITIVE_KEYS and not k.startswith(('PCO_', 'QB_', 'SMTP_', 'AZURE_'))
+    }
+
+    # Helper to build field object
+    def build_field(k, v):
+        masked = mask_value(v) if k in SENSITIVE_KEYS else v
+        return {
+            "value": masked,
+            "hint": CONFIG_HINTS.get(k, "")
+        }
+
+    for section_name, filter_func in sections_map.items():
+        response_data[section_name] = {
+            k: build_field(k, v) for k, v in config.items() if filter_func(k)
+        }
+    
+    # Special cases for mixed keys
+    if "SYNC_SCHEDULE" in config:
+        if "SYNC_SCHEDULE" not in response_data["general"]:
+            response_data["general"]["SYNC_SCHEDULE"] = build_field("SYNC_SCHEDULE", config["SYNC_SCHEDULE"])
+    if "FLASK_SECRET_KEY" in config:
+        response_data["general"]["FLASK_SECRET_KEY"] = build_field("FLASK_SECRET_KEY", config["FLASK_SECRET_KEY"])
+
+    return jsonify(response_data)
 
 # ---------------------------------------------------------------------------
 # Main
