@@ -84,6 +84,18 @@
             </div>
             
             <div class="flex flex-col items-end gap-2.5">
+                <!-- Global Sync Status -->
+                <div class="flex flex-col gap-2 pr-1">
+                    <div class="flex items-center justify-end gap-2.5">
+                        <span id="statusText" class="text-[11px] font-bold text-slate-500 uppercase tracking-wider leading-none transition-colors duration-500">Member Sync: Loading...</span>
+                        <div id="statusIndicator" class="w-1.5 h-1.5 rounded-full bg-slate-600 transition-all duration-500"></div>
+                    </div>
+                    <div class="flex items-center justify-end gap-2.5">
+                        <span id="donStatusText" class="text-[11px] font-bold text-slate-500 uppercase tracking-wider leading-none transition-colors duration-500">Donation Sync: Idle</span>
+                        <div id="donStatusDot" class="w-1.5 h-1.5 rounded-full bg-slate-600 transition-all duration-500"></div>
+                    </div>
+                </div>
+
                 <!-- User Profile -->
                 <div id="userProfile" class="hidden glass-card rounded-full pl-2 pr-4 py-1.5 flex items-center gap-3">
                     <div class="w-8 h-8 rounded-full bg-indigo-500/20 flex items-center justify-center text-indigo-400 font-bold text-xs" id="userInitial">?</div>
@@ -102,18 +114,6 @@
                     <a href="/logout" class="ml-1 p-1.5 rounded-lg hover:bg-red-500/10 text-slate-500 hover:text-red-400 transition-colors" title="Logout">
                         <i data-lucide="log-out" class="w-4 h-4"></i>
                     </a>
-                </div>
-
-                <!-- Global Sync Status -->
-                <div class="flex flex-col gap-2 mt-1 pr-1">
-                    <div class="flex items-center justify-end gap-2.5">
-                        <span id="statusText" class="text-[11px] font-bold text-slate-500 uppercase tracking-wider leading-none">Member Sync: Loading...</span>
-                        <div id="statusIndicator" class="w-1.5 h-1.5 rounded-full bg-slate-600 transition-all duration-500"></div>
-                    </div>
-                    <div class="flex items-center justify-end gap-2.5">
-                        <span id="donStatusText" class="text-[11px] font-bold text-slate-500 uppercase tracking-wider leading-none">Donation Sync: Idle</span>
-                        <div id="donStatusDot" class="w-1.5 h-1.5 rounded-full bg-slate-600 transition-all duration-500"></div>
-                    </div>
                 </div>
             </div>
         </header>
@@ -315,7 +315,7 @@
                     </div>
                     <span id="memberCount" class="text-xs text-slate-500 whitespace-nowrap">Loading...</span>
                 </div>
-                <div id="membersTable" class="overflow-hidden rounded-xl border border-slate-700/30">
+                <div id="membersTable" class="overflow-x-auto rounded-xl border border-slate-700/30 max-h-[60vh] overflow-y-auto">
                     <table class="w-full text-sm">
                         <thead>
                             <tr class="bg-slate-800/50 text-left">
