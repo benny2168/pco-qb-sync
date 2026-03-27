@@ -1419,7 +1419,7 @@
 
                         // Open latest log on initial load if none active
                         if (!activeLog && logsList && logsList.length > 0) {
-                            toggleLog(logsList[0], true, true);
+                            toggleLog(logsList[0], false, true); // No scroll on first load
                         } else if (isNewLogAtTop && data.status && (data.status.status === 'Running' || data.status.status === 'Syncing')) {
                             // Automatically switch to the newly created log when sync starts
                             toggleLog(logsList[0], true, true);
@@ -2026,7 +2026,7 @@
                     rebuildLogsUI(donationsLogsContainer, donationLogsList, activeDonationLog, 'donation');
 
                     if (!activeDonationLog && logs && logs.length > 0) {
-                        toggleDonationLog(logs[0], true, true);
+                        toggleDonationLog(logs[0], false, true); // No scroll on first load
                     } else if (isNewLogAtTop && status.status === 'Running') {
                         toggleDonationLog(logs[0], true, true);
                     }
