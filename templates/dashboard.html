@@ -1216,12 +1216,16 @@
             fetchLog(log);
         };
 
-        const toggleDonationLog = (log) => {
+        const toggleDonationLog = (log, scroll = false) => {
             const id = safeId(log);
             if (activeDonationLog === log) {
-                document.getElementById(`body-${id}`).classList.remove('flex');
-                document.getElementById(`body-${id}`).classList.add('hidden');
-                document.getElementById(`chevron-${id}`).classList.remove('rotate-180');
+                const body = document.getElementById(`body-${id}`);
+                if (body) {
+                    body.classList.remove('flex');
+                    body.classList.add('hidden');
+                }
+                const chevron = document.getElementById(`chevron-${id}`);
+                if (chevron) chevron.classList.remove('rotate-180');
                 activeDonationLog = null;
                 return;
             }
@@ -1237,6 +1241,13 @@
             if (autoScrollState[log] === undefined) autoScrollState[log] = true;
             updateAutoScrollUI(log);
             fetchLog(log);
+
+            if (scroll) {
+                setTimeout(() => {
+                    const el = document.getElementById(`accordion-${id}`);
+                    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }, 100);
+            }
         };
 
         const searchLog = (log) => {
@@ -2004,9 +2015,9 @@
                     rebuildLogsUI(donationsLogsContainer, donationLogsList, activeDonationLog, 'donation');
 
                     if (!activeDonationLog && logs && logs.length > 0) {
-                        toggleDonationLog(logs[0]);
+                        toggleDonationLog(logs[0], true);
                     } else if (isNewLogAtTop && status.status === 'Running') {
-                        toggleDonationLog(logs[0]);
+                        toggleDonationLog(logs[0], true);
                     }
                 }
 
@@ -2071,7 +2082,7 @@
                         // Wait a bit for the list to be populated via the polling
                         setTimeout(() => {
                             fetchDonationStatus(); // Force a status refresh
-                            setTimeout(() => toggleDonationLog(data.log_file), 500);
+                            setTimeout(() => toggleDonationLog(data.log_file, true), 500);
                         }, 500);
                     }
                 } else {
