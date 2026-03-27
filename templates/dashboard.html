@@ -1216,9 +1216,9 @@
             fetchLog(log);
         };
 
-        const toggleDonationLog = (log, scroll = false) => {
+        const toggleDonationLog = (log, scroll = false, forceOpen = false) => {
             const id = safeId(log);
-            if (activeDonationLog === log) {
+            if (activeDonationLog === log && !forceOpen) {
                 const body = document.getElementById(`body-${id}`);
                 if (body) {
                     body.classList.remove('flex');
@@ -1229,7 +1229,7 @@
                 activeDonationLog = null;
                 return;
             }
-            if (activeDonationLog) {
+            if (activeDonationLog && activeDonationLog !== log) {
                 const oldId = safeId(activeDonationLog);
                 const oldBody = document.getElementById(`body-${oldId}`);
                 const oldChevron = document.getElementById(`chevron-${oldId}`);
@@ -2015,9 +2015,9 @@
                     rebuildLogsUI(donationsLogsContainer, donationLogsList, activeDonationLog, 'donation');
 
                     if (!activeDonationLog && logs && logs.length > 0) {
-                        toggleDonationLog(logs[0], true);
+                        toggleDonationLog(logs[0], true, true);
                     } else if (isNewLogAtTop && status.status === 'Running') {
-                        toggleDonationLog(logs[0], true);
+                        toggleDonationLog(logs[0], true, true);
                     }
                 }
 
@@ -2082,7 +2082,7 @@
                         // Wait a bit for the list to be populated via the polling
                         setTimeout(() => {
                             fetchDonationStatus(); // Force a status refresh
-                            setTimeout(() => toggleDonationLog(data.log_file, true), 500);
+                            setTimeout(() => toggleDonationLog(data.log_file, true, true), 500);
                         }, 500);
                     }
                 } else {
