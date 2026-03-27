@@ -431,11 +431,9 @@ class DonationSyncRoutine:
         txn_type = self.settings.get("transaction_type", "SalesReceipt")
         lookback_days = self.settings.get("lookback_days", 30)
 
-        # Determine start date
-        if self.state.get("last_sync_time"):
-            since_date = self.state["last_sync_time"][:10]  # YYYY-MM-DD
-        else:
-            since_date = (datetime.now() - timedelta(days=lookback_days)).strftime("%Y-%m-%d")
+        # Determine start date - always use lookback window to catch backdated or delayed entries
+        # duplications are prevented by checked against synced_transaction_ids
+        since_date = (datetime.now() - timedelta(days=lookback_days)).strftime("%Y-%m-%d")
 
         transactions = []
         start_position = 1
