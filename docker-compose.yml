@@ -1,12 +1,12 @@
 version: "3.8"
 
 services:
-  pco-qb-sync:
+  admin-portal:
     build: .
-    container_name: pco-qb-sync
+    container_name: admin-portal
     restart: unless-stopped
     ports:
-      - "8337:8080"
+      - "7365:7365"
     volumes:
       - ${PCO_CONFIG_DIR:-./config}:/app/config
       - ${PCO_DATA_DIR:-./data}:/app/data
