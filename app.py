@@ -146,7 +146,13 @@ def authorized():
             
         user_claims = dict(user_info)
         user_claims["is_sso"] = True
-        user_claims["preferred_username"] = user_claims.get("email") or user_claims.get("preferred_username")
+        # Normalize email/username — Authentik may put it in 'email' or 'preferred_username'
+        email = user_claims.get("email") or user_claims.get("preferred_username", "")
+        user_claims["preferred_username"] = email
+        # Ensure 'name' is always set — fall back to email if not provided
+        if not user_claims.get("name"):
+            user_claims["name"] = user_claims.get("given_name", "") + " " + user_claims.get("family_name", "")
+            user_claims["name"] = user_claims["name"].strip() or email
         session["user"] = user_claims
         log_admin_login(session['user'])
         logging.info(f"User {session['user'].get('preferred_username')} logged in successfully via SSO.")

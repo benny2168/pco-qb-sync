@@ -840,93 +840,7 @@
                     </div>
                 </div>
 
-                <!-- Right Column: Admin Access & General -->
-                <div class="space-y-6">
-                    <h2 class="text-xl font-semibold text-slate-200 mb-2 flex items-center gap-2">
-                        <i data-lucide="lock" class="w-5 h-5 text-indigo-400"></i>
-                        Admin Access Management
-                    </h2>
 
-                    <!-- Admin Access Card -->
-                    <div class="glass-card rounded-2xl p-6 space-y-6">
-                        <div class="flex items-center justify-between">
-                            <div class="space-y-1">
-                                <h3 class="text-sm font-semibold text-slate-200">Local Admin Login</h3>
-                                <p class="text-xs text-slate-500">Allow logging in with local username/password</p>
-                            </div>
-                            <button onclick="toggleLocalLogin()" id="settingsLocalLoginToggle"
-                                class="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none bg-indigo-600">
-                                <span id="settingsLocalLoginToggleDot"
-                                    class="pointer-events-none inline-block h-5 w-5 translate-x-6 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"></span>
-                            </button>
-                        </div>
-
-                        <div class="space-y-4 pt-4 border-t border-slate-700/50">
-                            <h3 class="text-sm font-semibold text-slate-200">Change Admin Password</h3>
-                            <div class="space-y-3">
-                                <div class="space-y-1.5">
-                                    <label class="text-[10px] font-bold text-slate-500 uppercase">New Password</label>
-                                    <div class="relative">
-                                        <input type="password" id="settingsNewLocalPassword"
-                                            class="w-full bg-slate-900/50 border border-slate-700/50 rounded-xl px-4 py-2.5 text-slate-200 focus:outline-none focus:border-indigo-500 transition-colors pr-10"
-                                            placeholder="••••••••">
-                                        <button onclick="togglePassword('settingsNewLocalPassword')"
-                                            class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300">
-                                            <i data-lucide="eye" class="w-4 h-4"></i>
-                                        </button>
-                                    </div>
-                                </div>
-                                <div class="space-y-1.5">
-                                    <label class="text-[10px] font-bold text-slate-500 uppercase">Confirm Password</label>
-                                    <div class="relative">
-                                        <input type="password" id="settingsConfirmLocalPassword"
-                                            class="w-full bg-slate-900/50 border border-slate-700/50 rounded-xl px-4 py-2.5 text-slate-200 focus:outline-none focus:border-indigo-500 transition-colors pr-10"
-                                            placeholder="••••••••">
-                                        <button onclick="togglePassword('settingsConfirmLocalPassword')"
-                                            class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300">
-                                            <i data-lucide="eye" class="w-4 h-4"></i>
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <button id="saveAdminSettingsBtn" onclick="saveLocalSettings()"
-                            class="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium transition-all active:scale-[0.98]">
-                            <i data-lucide="save" class="w-4 h-4"></i>
-                            Save Admin Settings
-                        </button>
-                    </div>
-
-                    <!-- Admin Login History Card -->
-                    <div class="glass-card rounded-2xl overflow-hidden">
-                        <button onclick="toggleCard('card-login-history'); loadAdminLogins();" class="w-full px-6 py-4 flex items-center justify-between hover:bg-white/5 transition-colors group">
-                            <div class="flex items-center gap-3">
-                                <i data-lucide="history" class="w-5 h-5 text-indigo-400"></i>
-                                <span class="font-semibold text-slate-200 group-hover:text-white transition-colors">Admin Login History</span>
-                            </div>
-                            <i data-lucide="chevron-down" class="w-5 h-5 text-slate-500 rotate-icon" id="icon-card-login-history"></i>
-                        </button>
-                        <div id="card-login-history" class="collapsible-content px-6 pb-6">
-                            <div class="overflow-x-auto">
-                                <table class="w-full text-left">
-                                    <thead>
-                                        <tr class="border-b border-slate-800">
-                                            <th class="px-2 py-3 text-[10px] uppercase font-bold text-slate-500 tracking-wider">User</th>
-                                            <th class="px-2 py-3 text-[10px] uppercase font-bold text-slate-500 tracking-wider">Time</th>
-                                            <th class="px-2 py-3 text-[10px] uppercase font-bold text-slate-500 tracking-wider">IP Address</th>
-                                            <th class="px-2 py-3 text-[10px] uppercase font-bold text-slate-500 tracking-wider text-right">Method</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="adminLoginTableBody" class="divide-y divide-slate-800">
-                                        <!-- Dynamic Content -->
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-
-                </div>
             </div>
         </div>
     </div> <!-- end max-w container -->
@@ -970,7 +884,6 @@
             if (tab === 'donations') { fetchDonationStatus(); loadDonationSettings(); }
             if (tab === 'settings') {
                 loadEnvironmentConfig();
-                loadLocalAdminSettings();
             }
         }
 
@@ -987,7 +900,7 @@
         async function fetchPCOFunds() {
             if (pcoFunds.length > 0) return pcoFunds;
             try {
-                const res = await fetch('/api/pco-funds');
+                const res = await fetch('/pco-qb/api/pco-funds');
                 pcoFunds = await res.json();
                 return pcoFunds;
             } catch (e) {
@@ -999,7 +912,7 @@
         async function fetchQBAccountsItems() {
             if (qbAccountsItems.length > 0) return qbAccountsItems;
             try {
-                const res = await fetch('/api/qb-accounts-items');
+                const res = await fetch('/pco-qb/api/qb-accounts-items');
                 qbAccountsItems = await res.json();
                 return qbAccountsItems;
             } catch (e) {
@@ -1444,7 +1357,7 @@
 
         const fetchUserInfo = async () => {
             try {
-                const res = await fetch('/api/me');
+                const res = await fetch('/pco-qb/api/me');
                 if (res.ok) {
                     const user = await res.json();
                     const nameEl = document.getElementById('userName');
@@ -1660,7 +1573,7 @@
             };
 
             try {
-                const resp = await fetch('/api/member-sync-settings', {
+                const resp = await fetch('/pco-qb/api/member-sync-settings', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(settings)
@@ -1749,7 +1662,7 @@
 
         async function fetchMembers() {
             try {
-                const res = await fetch('/api/members');
+                const res = await fetch('/pco-qb/api/members');
                 memberData = await res.json();
                 renderMemberTable();
             } catch (e) {
@@ -1944,7 +1857,7 @@
 
         async function fetchDonationStatus() {
             try {
-                const resp = await fetch('/api/donation-sync-status');
+                const resp = await fetch('/pco-qb/api/donation-sync-status');
                 if (resp.status === 401) {
                     window.location.href = '/login';
                     return;
@@ -2050,7 +1963,7 @@
 
         async function fetchDonations() {
             try {
-                const res = await fetch('/api/donations');
+                const res = await fetch('/pco-qb/api/donations');
                 donationData = await res.json();
                 renderMemberTable(); // Refresh member table to include new donation actions
             } catch (e) {
@@ -2083,7 +1996,7 @@
             text.textContent = 'Starting...';
 
             try {
-                const resp = await fetch('/api/donation-sync-now', { method: 'POST' });
+                const resp = await fetch('/pco-qb/api/donation-sync-now', { method: 'POST' });
                 const data = await resp.json();
                 if (resp.ok) {
                     text.textContent = 'Sync Running...';
@@ -2116,9 +2029,9 @@
             try {
                 // Fetch QB Items and PCO Funds first
                 const [settingsRes, qbRes, pcoRes] = await Promise.all([
-                    fetch('/api/donation-sync-settings'),
-                    fetch('/api/qb-items'),
-                    fetch('/api/pco-funds')
+                    fetch('/pco-qb/api/donation-sync-settings'),
+                    fetch('/pco-qb/api/qb-items'),
+                    fetch('/pco-qb/api/pco-funds')
                 ]);
 
                 const settings = await settingsRes.json();
@@ -2235,7 +2148,7 @@
             };
 
             try {
-                const resp = await fetch('/api/donation-sync-settings', {
+                const resp = await fetch('/pco-qb/api/donation-sync-settings', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(settings)
@@ -2277,7 +2190,7 @@
             if (!confirm(`Are you sure you want to clear all ${type} sync logs? This action cannot be undone.`)) return;
 
             try {
-                const resp = await fetch('/api/logs/clear', {
+                const resp = await fetch('/pco-qb/api/logs/clear', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ type })
@@ -2308,7 +2221,7 @@
             if (!confirm(`Are you sure you want to clear the persistent sync history for ${type}s? This action cannot be undone.${warning}`)) return;
 
             try {
-                const resp = await fetch('/api/sync/clear-history', {
+                const resp = await fetch('/pco-qb/api/sync/clear-history', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ type })
@@ -2345,7 +2258,7 @@
 
         async function loadLocalAdminSettings() {
             try {
-                const resp = await fetch('/api/auth/local-settings');
+                const resp = await fetch('/pco-qb/api/auth/local-settings');
                 const data = await resp.json();
                 localLoginEnabled = data.enabled;
                 updateLocalToggleUI();
@@ -2368,7 +2281,7 @@
         async function loadAdminLogins() {
             const tbody = document.getElementById('adminLoginTableBody');
             try {
-                const resp = await fetch('/api/admin-logins');
+                const resp = await fetch('/pco-qb/api/admin-logins');
                 const logs = await resp.json();
                 console.log('Admin Logins Response:', logs);
                 
@@ -2443,7 +2356,7 @@
             btn.disabled = true;
 
             try {
-                const resp = await fetch('/api/auth/local-settings', {
+                const resp = await fetch('/pco-qb/api/auth/local-settings', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -2473,7 +2386,7 @@
         // ── QuickBooks Credentials Logic ──────────────────────────────────
         async function loadQBCredentials() {
             try {
-                const res = await fetch('/api/qb-credentials');
+                const res = await fetch('/pco-qb/api/qb-credentials');
                 const data = await res.json();
                 document.getElementById('qbClientId').value = data.QB_CLIENT_ID || '';
                 document.getElementById('qbClientSecret').value = data.QB_CLIENT_SECRET || '';
@@ -2510,7 +2423,7 @@
             if (token && token !== '********') payload.QB_REFRESH_TOKEN = token.trim();
 
             try {
-                const res = await fetch('/api/qb-credentials', {
+                const res = await fetch('/pco-qb/api/qb-credentials', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
@@ -2593,7 +2506,7 @@
 
         async function loadEnvironmentConfig() {
             try {
-                const res = await fetch('/api/config');
+                const res = await fetch('/pco-qb/api/config');
                 const data = await res.json();
                 currentConfig = data;
 
@@ -2649,7 +2562,7 @@
             });
 
             try {
-                const res = await fetch('/api/config', {
+                const res = await fetch('/pco-qb/api/config', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(updates)
