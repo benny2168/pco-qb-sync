@@ -3,7 +3,7 @@ version: "3.8"
 services:
   admin-portal:
     build: .
-    image: admin-portal:v1.5
+    image: admin-portal:v1.6
     container_name: admin-portal
     environment:
       - PCO_CONFIG_DIR
@@ -12,6 +12,7 @@ services:
       - OIDC_CLIENT_ID
       - OIDC_CLIENT_SECRET
       - OIDC_DISCOVERY_URL
+      - TZ=America/Chicago
     restart: unless-stopped
     ports:
       - "7365:7365"
@@ -19,5 +20,3 @@ services:
       - ${PCO_CONFIG_DIR:-./config}:/app/config
       - ${PCO_DATA_DIR:-./data}:/app/data
       - ${PCO_LOGS_DIR:-./logs}:/app/logs
-    environment:
-      - TZ=America/Chicago
