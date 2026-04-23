@@ -1,7 +1,9 @@
 from flask import Blueprint, request, jsonify, session, redirect, url_for, render_template, send_file
 import os
 import json
+import glob
 import logging
+import threading
 from functools import wraps
 from datetime import datetime
 import secrets
@@ -23,6 +25,107 @@ def login_required(f):
 
 # Shared base config/auth utilities that were moved to app.py
 from utils import *
+
+# ---------------------------------------------------------------------------
+# Legacy compatibility — items that moved out of monolithic app.py
+# ---------------------------------------------------------------------------
+# These were previously defined in app.py and referenced by this module.
+# We import the sync scripts lazily inside functions to avoid circular issues.
+
+# Constants that used to live in app.py
+REDIRECT_PATH = '/qb-callback'
+REDIRECT_URI_OVERRIDE = os.getenv('REDIRECT_URI_OVERRIDE', '')
+AUTHORITY = os.getenv('AZURE_AUTHORITY', '')
+GROUP_ID = os.getenv('GROUP_ID', '')
+SCOPE = os.getenv('SCOPE', 'User.Read').split(',') if os.getenv('SCOPE') else ['User.Read']
+
+SENSITIVE_KEYS = {
+    'QB_CLIENT_SECRET', 'QB_REFRESH_TOKEN', 'PCO_SECRET', 'FLASK_SECRET_KEY',
+    'SMTP_PASSWORD', 'AZURE_CLIENT_SECRET'
+}
+
+CONFIG_HINTS = {
+    'PCO_APP_ID': 'Planning Center App ID (Personal Access Token ID)',
+    'PCO_SECRET': 'Planning Center Secret',
+    'PCO_LIST_ID': 'Planning Center List ID for Head of Household',
+    'QB_CLIENT_ID': 'QuickBooks OAuth2 Client ID',
+    'QB_CLIENT_SECRET': 'QuickBooks OAuth2 Client Secret',
+    'QB_REFRESH_TOKEN': 'QuickBooks OAuth2 Refresh Token',
+    'QB_REALM_ID': 'QuickBooks Company/Realm ID',
+    'QB_ENVIRONMENT': 'QuickBooks environment: sandbox or production',
+    'QB_REDIRECT_URI': 'QuickBooks OAuth2 redirect URI',
+    'SMTP_HOST': 'SMTP server hostname',
+    'SMTP_PORT': 'SMTP server port (e.g. 587)',
+    'SMTP_USER': 'SMTP login username',
+    'SMTP_PASSWORD': 'SMTP login password',
+    'SMTP_RECIPIENT_EMAIL': 'Email address to receive sync summaries',
+    'SYNC_SCHEDULE': 'Cron schedule for member sync (6-field: sec min hr day mo dow)',
+    'FLASK_SECRET_KEY': 'Flask session secret key (auto-generated)',
+}
+
+def mask_value(v):
+    if not v:
+        return ''
+    s = str(v)
+    if len(s) <= 4:
+        return '****'
+    return s[:2] + '****' + s[-2:]
+
+def save_auth_settings(settings):
+    return robust_save_file(AUTH_SETTINGS_PATH, settings)
+
+def save_json_with_retries(path, data):
+    return robust_save_file(path, data)
+
+def update_env_file(key, value):
+    return update_env_file_bulk({key: value})
+
+def get_msal_app():
+    """Build an MSAL app — only used for legacy QB OAuth flow."""
+    try:
+        import msal
+        client_id = os.getenv('AZURE_CLIENT_ID', '')
+        client_secret = os.getenv('AZURE_CLIENT_SECRET', '')
+        authority = AUTHORITY or f"https://login.microsoftonline.com/{os.getenv('AZURE_TENANT_ID', 'common')}"
+        return msal.ConfidentialClientApplication(client_id, authority=authority, client_credential=client_secret)
+    except ImportError:
+        logging.warning("MSAL not installed. Legacy Microsoft SSO unavailable.")
+        return None
+
+def load_config(config_path=None):
+    """Load main sync config.json."""
+    if config_path is None:
+        config_path = os.path.join(BASE_DIR, 'config', 'config.json')
+        if not os.path.exists(config_path):
+            config_path = os.path.join(BASE_DIR, 'config.json')
+    if os.path.exists(config_path):
+        try:
+            with open(config_path, 'r') as f:
+                return json.load(f)
+        except Exception:
+            pass
+    return {}
+
+def setup_logging(config, prefix='sync'):
+    """Set up a timestamped log file and return its path."""
+    log_dir = os.path.join(BASE_DIR, 'logs')
+    os.makedirs(log_dir, exist_ok=True)
+    ts = datetime.now().strftime('%Y%m%d_%H%M%S')
+    log_file = os.path.join(log_dir, f'{prefix}_{ts}.log')
+    file_handler = logging.FileHandler(log_file, encoding='utf-8')
+    file_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
+    logging.getLogger().addHandler(file_handler)
+    return log_file
+
+def rotate_logs(keep=10, prefix='sync'):
+    """Keep only the most recent N log files matching a prefix."""
+    log_dir = os.path.join(BASE_DIR, 'logs')
+    files = sorted(glob.glob(os.path.join(log_dir, f'{prefix}_*.log')), key=os.path.getmtime, reverse=True)
+    for old in files[keep:]:
+        try:
+            os.remove(old)
+        except Exception:
+            pass
 
 # ---------------------------------------------------------------------------
 # Scheduler Setup
