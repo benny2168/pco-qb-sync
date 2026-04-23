@@ -197,7 +197,7 @@ def login():
         logging.exception("Failed to initiate login flow")
         return f"Internal error during login initiation: {e}", 500
 
-@pco_qb_bp.route(REDIRECT_PATH)
+@pco_qb_bp.route('/qb-callback')
 def authorized():
     """Callback for Microsoft OAuth."""
     try:
