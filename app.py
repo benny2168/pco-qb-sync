@@ -78,7 +78,10 @@ if OIDC_CLIENT_ID and OIDC_CLIENT_SECRET and OIDC_DISCOVERY_URL:
         client_id=OIDC_CLIENT_ID,
         client_secret=OIDC_CLIENT_SECRET,
         server_metadata_url=OIDC_DISCOVERY_URL,
-        client_kwargs={'scope': 'openid profile email groups'}
+        client_kwargs={
+            'scope': 'openid profile email groups',
+            'jwks_algorithms': ['RS256']
+        }
     )
     logging.info("Registered Authentik OIDC client.")
 else:
