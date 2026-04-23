@@ -7,7 +7,7 @@ from datetime import datetime
 import secrets
 import requests
 import time
-from ap_scheduler.triggers.cron import CronTrigger
+from apscheduler.triggers.cron import CronTrigger
 
 pco_qb_bp = Blueprint('pco_qb', __name__, template_folder='templates')
 
