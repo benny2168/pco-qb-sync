@@ -22,7 +22,7 @@ def login_required(f):
     return decorated_function
 
 # Shared base config/auth utilities that were moved to app.py
-from app import update_env_file_bulk, update_env_file, robust_save_file, BASE_DIR
+from utils import *
 
 # ---------------------------------------------------------------------------
 # Scheduler Setup
