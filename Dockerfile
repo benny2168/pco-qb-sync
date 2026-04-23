@@ -23,4 +23,4 @@ RUN mkdir -p /app/config /app/data /app/logs
 EXPOSE 7365
 
 # Use a slightly more robust startup command if needed
-CMD ["python", "app.py"]
+CMD ["gunicorn", "--bind", "0.0.0.0:7365", "app:app"]
