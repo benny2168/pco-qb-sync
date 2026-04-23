@@ -20,7 +20,7 @@ COPY . .
 # Ensure necessary directories exist for volume mounting
 RUN mkdir -p /app/config /app/data /app/logs
 
-EXPOSE 8080
+EXPOSE 7365
 
 # Use a slightly more robust startup command if needed
 CMD ["python", "app.py"]

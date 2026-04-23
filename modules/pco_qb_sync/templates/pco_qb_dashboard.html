@@ -1,0 +1,2517 @@
+{% extends "base.html" %}
+
+{% block header_title %}
+<img src="/static/logos/pco-logo.svg?v=2" class="h-6 sm:h-10 w-auto" alt="PCO">
+<span class="gradient-text text-2xl sm:text-4xl font-bold relative -top-[2px] sm:-top-[6px]">&harr;</span>
+<img src="/static/logos/qb-logo.svg?v=2" class="h-6 sm:h-10 w-auto" alt="QuickBooks">
+<span class="gradient-text">Sync</span>
+{% endblock %}
+
+{% block header_subtitle %}
+<i data-lucide="activity" class="w-3.5 h-3.5 sm:w-4 sm:h-4"></i> Dashboard & Logging
+{% endblock %}
+
+{% block header_extra %}
+<div class="flex flex-col gap-1.5 sm:gap-2 pr-1">
+    <div class="flex items-center justify-end gap-2 sm:gap-2.5">
+        <span id="statusText" class="text-[9px] sm:text-[11px] font-bold text-slate-500 uppercase tracking-wider leading-none transition-colors duration-500">Member Sync: Loading...</span>
+        <div id="statusIndicator" class="w-1.5 h-1.5 rounded-full bg-slate-600 transition-all duration-500"></div>
+    </div>
+    <div class="flex items-center justify-end gap-2 sm:gap-2.5">
+        <span id="donStatusText" class="text-[9px] sm:text-[11px] font-bold text-slate-500 uppercase tracking-wider leading-none transition-colors duration-500">Donation Sync: Idle</span>
+        <div id="donStatusDot" class="w-1.5 h-1.5 rounded-full bg-slate-600 transition-all duration-500"></div>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- Tab Bar -->
+        <div class="mt-6 flex gap-1 bg-slate-800/30 rounded-xl p-1 w-fit">
+            <button onclick="switchTab('sync')" id="tab-sync"
+                class="tab-btn px-5 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 bg-indigo-600/20 text-indigo-300">
+                <i data-lucide="users" class="w-4 h-4"></i> Member Sync
+            </button>
+            <button onclick="switchTab('donations')" id="tab-donations"
+                class="tab-btn px-5 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 text-slate-400 hover:text-slate-200">
+                <i data-lucide="banknote" class="w-4 h-4"></i> Donation Sync
+            </button>
+            <button onclick="switchTab('members')" id="tab-members"
+                class="tab-btn px-5 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 text-slate-400 hover:text-slate-200">
+                <i data-lucide="history" class="w-4 h-4"></i> Member History
+            </button>
+            <button onclick="switchTab('settings')" id="tab-settings"
+                class="tab-btn px-5 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 text-slate-400 hover:text-slate-200">
+                <i data-lucide="settings" class="w-4 h-4"></i> System Settings
+            </button>
+        </div>
+
+        <!-- Tab: Member Sync -->
+        <div id="panel-sync">
+            <section class="mt-8">
+                <h2 class="text-xl font-semibold text-slate-200 mb-6 flex items-center gap-2">
+                    <i data-lucide="users" class="w-5 h-5 text-indigo-400"></i>
+                    Member Info Sync (PCO People → QB)
+                </h2>
+
+                <!-- Metrics Row -->
+                <main class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <!-- Sync Control -->
+                    <div class="glass-card rounded-2xl p-6 flex flex-col justify-start gap-4">
+                        <h3 class="text-xs font-semibold tracking-wider text-slate-400 uppercase">Controls</h3>
+                        <button id="syncNowBtn"
+                            class="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-medium transition-all shadow-lg shadow-indigo-900/30 hover:shadow-indigo-800/40 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed">
+                            <i data-lucide="play" class="w-4 h-4" id="syncNowIcon"></i>
+                            <span id="syncNowText">Run Member Sync</span>
+                        </button>
+                    </div>
+
+                    <div class="glass-card rounded-2xl p-6 flex flex-col justify-between">
+                        <div>
+                            <h3 class="text-xs font-semibold tracking-wider text-slate-400 mb-4 uppercase">Last Sync
+                            </h3>
+                            <div class="grid grid-cols-2 gap-y-3 text-sm mb-4">
+                                <p class="text-slate-500">Started</p>
+                                <p id="startTime" class="font-medium text-slate-200 text-right">--</p>
+                                <p class="text-slate-500">Duration</p>
+                                <p id="durationTime" class="font-medium text-indigo-400 text-right">--</p>
+                            </div>
+                        </div>
+                        <div class="border-t border-slate-800/50 pt-4">
+                            <h3 class="text-xs font-semibold tracking-wider text-slate-400 mb-2 uppercase">Next Sync
+                            </h3>
+                            <div class="grid grid-cols-2 text-sm">
+                                <p class="text-slate-500">Scheduled for</p>
+                                <p id="nextSyncTime" class="font-medium text-slate-200 text-right">--</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="glass-card rounded-2xl p-6 flex items-center justify-around text-center">
+                        <div class="flex-1">
+                            <i data-lucide="user-plus" class="w-6 h-6 text-green-400 mx-auto mb-2"></i>
+                            <p class="text-3xl font-bold text-slate-100" id="statCreated">-</p>
+                            <p class="text-[10px] text-slate-500 uppercase mt-1 font-semibold tracking-tight">Created
+                            </p>
+                        </div>
+                        <div class="w-px h-12 bg-slate-700/50"></div>
+                        <div class="flex-1">
+                            <i data-lucide="refresh-cw" class="w-6 h-6 text-blue-400 mx-auto mb-2"></i>
+                            <p class="text-3xl font-bold text-slate-100" id="statUpdated">-</p>
+                            <p class="text-[10px] text-slate-500 uppercase mt-1 font-semibold tracking-tight">Updated
+                            </p>
+                        </div>
+                        <div class="w-px h-12 bg-slate-700/50"></div>
+                        <div class="flex-1">
+                            <i data-lucide="alert-triangle" class="w-6 h-6 text-red-500 mx-auto mb-2"></i>
+                            <p class="text-3xl font-bold text-slate-100" id="statErrors">-</p>
+                            <p class="text-[10px] text-slate-500 uppercase mt-1 font-semibold tracking-tight">Errors</p>
+                        </div>
+                    </div>
+                </main>
+
+                <!-- Member Sync Configuration Card -->
+                <div class="glass-card rounded-2xl p-8 mt-8">
+                    <div class="flex items-center justify-between mb-6">
+                        <h3 class="text-base font-semibold text-slate-200 flex items-center gap-2">
+                            <i data-lucide="settings" class="w-5 h-5 text-indigo-400"></i>
+                            Member Sync Configuration
+                        </h3>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <!-- Schedule & Email -->
+                        <div class="space-y-6">
+                            <div>
+                                <label
+                                    class="block text-xs font-medium text-slate-400 mb-3 uppercase tracking-wider">Sync
+                                    Frequency</label>
+                                <div
+                                    class="flex items-center gap-2 bg-slate-900/50 p-3 rounded-xl border border-slate-800/50">
+                                    <i data-lucide="calendar-clock" class="w-4 h-4 text-indigo-400"></i>
+                                    <div class="flex-1 flex items-center gap-2 flex-wrap">
+                                        <select id="schedFrequency"
+                                            class="bg-slate-800 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 transition-colors">
+                                            <option value="daily">Daily</option>
+                                            <option value="weekly">Weekly</option>
+                                            <option value="monthly">Monthly</option>
+                                        </select>
+                                        <select id="schedDay"
+                                            class="bg-slate-800 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 transition-colors hidden"></select>
+                                        <span class="text-slate-500 text-xs text-center min-w-[12px]">@</span>
+                                        <select id="schedHour"
+                                            class="bg-slate-800 border border-slate-700 rounded-lg px-4 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 transition-colors"></select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label
+                                    class="block text-xs font-medium text-slate-400 mb-3 uppercase tracking-wider">Notification
+                                    Email</label>
+                                <div class="relative flex items-center group">
+                                    <i data-lucide="mail" class="w-4 h-4 text-indigo-400 absolute left-4"></i>
+                                    <input type="email" id="emailInput" placeholder="recipient@example.com"
+                                        class="w-full bg-slate-900/50 border border-slate-800/50 rounded-xl pl-11 pr-4 py-3 text-sm text-slate-200 focus:outline-none focus:border-indigo-500 transition-all group-hover:border-slate-700">
+                                </div>
+                            </div>
+
+                            <div>
+                                <label
+                                    class="block text-xs font-medium text-slate-400 mb-3 uppercase tracking-wider">PCO
+                                    Sync List ID</label>
+                                <div class="relative flex items-center group">
+                                    <i data-lucide="list" class="w-4 h-4 text-indigo-400 absolute left-4"></i>
+                                    <input type="text" id="pcoListIdInput" placeholder="4661587"
+                                        class="w-full bg-slate-900/50 border border-slate-800/50 rounded-xl pl-11 pr-4 py-3 text-sm text-slate-200 focus:outline-none focus:border-indigo-500 transition-all group-hover:border-slate-700">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Display Name Format -->
+                        <div class="space-y-4">
+                            <label class="block text-xs font-medium text-slate-400 uppercase tracking-wider">Display
+                                Name Format Builder</label>
+                            <div class="flex flex-wrap gap-2">
+                                <button onclick="insertFieldCode('{first_name}')"
+                                    class="px-2.5 py-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-[10px] text-slate-300 border border-slate-700 transition-all">First
+                                    Name</button>
+                                <button onclick="insertFieldCode('{middle_name}')"
+                                    class="px-2.5 py-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-[10px] text-slate-300 border border-slate-700 transition-all">Middle
+                                    Name</button>
+                                <button onclick="insertFieldCode('{last_name}')"
+                                    class="px-2.5 py-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-[10px] text-slate-300 border border-slate-700 transition-all">Last
+                                    Name</button>
+                                <button onclick="insertFieldCode('{nickname}')"
+                                    class="px-2.5 py-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-[10px] text-slate-300 border border-slate-700 transition-all">Nickname</button>
+                                <button onclick="insertFieldCode('{prayer_group}')"
+                                    class="px-2.5 py-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-[10px] text-slate-300 border border-slate-700 transition-all">Prayer
+                                    Group</button>
+                            </div>
+                            <div class="relative flex items-center group">
+                                <i data-lucide="type" class="w-4 h-4 text-indigo-400 absolute left-4"></i>
+                                <input type="text" id="displayNameFormatInput" placeholder="{first_name} {last_name}"
+                                    class="w-full bg-slate-900/50 border border-slate-800/50 rounded-xl pl-11 pr-4 py-3 text-sm text-slate-200 focus:outline-none focus:border-indigo-500 transition-all font-mono group-hover:border-slate-700">
+                            </div>
+                            <div class="flex flex-col gap-2 px-1">
+                                <p class="text-[10px] text-slate-500 leading-relaxed">
+                                    <span class="text-indigo-400 font-semibold italic">Tip:</span> Use <code
+                                        class="bg-slate-800 px-1 rounded text-indigo-300">[ ]</code> for conditional
+                                    blocks.
+                                    Content inside brackets only displays if the field is not empty.
+                                    Example: <code
+                                        class="bg-slate-800 px-1 rounded text-indigo-300">["{nickname}"]</code>
+                                </p>
+                                <div class="flex items-center justify-between">
+                                    <p class="text-[10px] text-slate-500 flex items-center gap-1.5">
+                                        <span class="font-bold uppercase tracking-widest text-[9px]">Preview:</span>
+                                        <span id="displayNamePreview" class="text-indigo-400 font-medium italic">John
+                                            Smith</span>
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-8 flex justify-end">
+                        <button onclick="saveMemberSettings()" id="saveMemberSettingsBtn"
+                            class="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium rounded-xl transition-all flex items-center gap-2 shadow-lg shadow-indigo-900/20 active:scale-95">
+                            <i data-lucide="save" class="w-4 h-4"></i>
+                            Save Settings
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Logs Section -->
+                <section class="mt-8">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-xl font-semibold text-slate-200 flex items-center gap-2">
+                            <i data-lucide="terminal-square" class="w-5 h-5 text-indigo-400"></i>
+                            Member Sync Logs
+                        </h2>
+                        <div class="flex items-center gap-2">
+                            <button onclick="clearLogs('member')"
+                                class="text-[10px] uppercase tracking-wider font-bold px-3 py-1.5 rounded-lg bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 transition-all border border-rose-500/20 flex items-center gap-2">
+                                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Clear Logs
+                            </button>
+                        </div>
+                    </div>
+                    <div id="logsContainer" class="space-y-4 pb-12">
+                        <!-- JS will populate accordions here -->
+                        <div class="text-center p-8 text-slate-400">Loading logs overview...</div>
+                    </div>
+                </section>
+        </div> <!-- end panel-sync -->
+
+        <!-- Tab: Member History -->
+        <div id="panel-members" class="hidden">
+            <!-- Members Section -->
+            <section class="mt-8">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-semibold text-slate-200 flex items-center gap-2">
+                        <i data-lucide="history" class="w-5 h-5 text-indigo-400"></i>
+                        Member Sync History
+                    </h2>
+                    <button onclick="confirmClearHistory('member')"
+                        class="text-[10px] uppercase tracking-wider font-bold px-3 py-1.5 rounded-lg bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 transition-all border border-amber-500/20 flex items-center gap-2">
+                        <i data-lucide="history" class="w-3.5 h-3.5"></i> Clear History
+                    </button>
+                </div>
+                <div class="glass-card rounded-2xl p-6 w-full">
+                    <div class="flex items-center gap-3 mb-6">
+                        <div class="relative flex-1">
+                            <i data-lucide="search"
+                                class="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2"></i>
+                            <input type="text" id="memberSearch" placeholder="Search by name or ID..."
+                                class="w-full bg-slate-900/50 border border-slate-700/50 rounded-lg pl-9 pr-3 py-2 text-sm text-slate-300 focus:outline-none focus:border-indigo-500 transition-colors">
+                        </div>
+                        <span id="memberCount" class="text-xs text-slate-500 whitespace-nowrap">Loading...</span>
+                    </div>
+                    <div id="membersTable"
+                        class="overflow-x-auto rounded-xl border border-slate-700/30 max-h-[60vh] overflow-y-auto">
+                        <table class="w-full text-sm">
+                            <thead>
+                                <tr class="bg-slate-800/50 text-left">
+                                    <th
+                                        class="px-4 py-2.5 text-[10px] font-bold text-slate-500 uppercase tracking-widest w-12 text-center">
+                                        #</th>
+                                    <th class="px-4 py-2.5 text-[10px] font-bold text-slate-500 uppercase tracking-widest cursor-pointer group"
+                                        onclick="setMemberSort('firstName')">
+                                        <div class="flex items-center gap-1.5">
+                                            First
+                                            <i data-lucide="chevron-down"
+                                                class="w-2.5 h-2.5 transition-opacity opacity-0 group-hover:opacity-100"
+                                                id="sort-firstName"></i>
+                                        </div>
+                                    </th>
+                                    <th class="px-4 py-2.5 text-[10px] font-bold text-slate-500 uppercase tracking-widest cursor-pointer group"
+                                        onclick="setMemberSort('lastName')">
+                                        <div class="flex items-center gap-1.5">
+                                            Last
+                                            <i data-lucide="chevron-down"
+                                                class="w-2.5 h-2.5 transition-opacity opacity-0 group-hover:opacity-100"
+                                                id="sort-lastName"></i>
+                                        </div>
+                                    </th>
+                                    <th class="px-4 py-2.5 text-[10px] font-bold text-slate-500 uppercase tracking-widest cursor-pointer group"
+                                        onclick="setMemberSort('pcId')">
+                                        <div class="flex items-center gap-1.5">
+                                            PC ID
+                                            <i data-lucide="chevron-down"
+                                                class="w-2.5 h-2.5 transition-opacity opacity-0 group-hover:opacity-100"
+                                                id="sort-pcId"></i>
+                                        </div>
+                                    </th>
+                                    <th class="px-4 py-2.5 text-[10px] font-bold text-slate-500 uppercase tracking-widest text-center cursor-pointer group"
+                                        onclick="setMemberSort('action')">
+                                        <div class="flex items-center gap-1.5 justify-center">
+                                            Action
+                                            <i data-lucide="chevron-down"
+                                                class="w-2.5 h-2.5 transition-opacity opacity-0 group-hover:opacity-100"
+                                                id="sort-action"></i>
+                                        </div>
+                                    </th>
+                                    <th class="px-4 py-2.5 text-[10px] font-bold text-slate-500 uppercase tracking-widest text-right cursor-pointer group"
+                                        onclick="setMemberSort('date')">
+                                        <div class="flex items-center gap-1.5 justify-end">
+                                            Synced
+                                            <i data-lucide="chevron-down"
+                                                class="w-2.5 h-2.5 transition-opacity opacity-0 group-hover:opacity-100"
+                                                id="sort-date"></i>
+                                        </div>
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody id="membersBody" class="divide-y divide-slate-700/30">
+                                <tr>
+                                    <td colspan="4" class="text-center py-8 text-slate-500">Loading member data...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+        </div> <!-- end panel-members -->
+
+        <!-- Tab: Donation Sync -->
+        <div id="panel-donations" class="hidden">
+            <section class="mt-8">
+                <h2 class="text-xl font-semibold text-slate-200 mb-6 flex items-center gap-2">
+                    <i data-lucide="banknote" class="w-5 h-5 text-indigo-400"></i>
+                    Donation Info Sync (QB → PCO Giving)
+                </h2>
+
+                <!-- Status & Controls Row -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                    <!-- Sync Control -->
+                    <div class="glass-card rounded-2xl p-6 flex flex-col justify-start gap-4">
+                        <h3 class="text-xs font-semibold tracking-wider text-slate-400 uppercase">Controls</h3>
+                        <button id="donationSyncBtn" onclick="triggerDonationSync()"
+                            class="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-medium transition-all shadow-lg shadow-emerald-900/30 hover:shadow-emerald-800/40 active:scale-95">
+                            <i data-lucide="play" class="w-4 h-4" id="donSyncIcon"></i>
+                            <span id="donSyncText">Run Donation Sync</span>
+                        </button>
+                    </div>
+
+                    <!-- Last Sync Info -->
+                    <div class="glass-card rounded-2xl p-6 flex flex-col justify-between">
+                        <div>
+                            <h3 class="text-xs font-semibold tracking-wider text-slate-400 mb-4 uppercase">Last Sync
+                            </h3>
+                            <div class="grid grid-cols-2 gap-y-3 text-sm mb-4">
+                                <p class="text-slate-500">Started</p>
+                                <p id="donStartTime" class="font-medium text-slate-200 text-right">--</p>
+                                <p class="text-slate-500">Duration</p>
+                                <p id="donDuration" class="font-medium text-indigo-400 text-right">--</p>
+                            </div>
+                        </div>
+                        <div class="border-t border-slate-800/50 pt-4">
+                            <h3 class="text-xs font-semibold tracking-wider text-slate-400 mb-2 uppercase">Next Sync
+                            </h3>
+                            <div class="grid grid-cols-2 text-sm">
+                                <p class="text-slate-500">Scheduled for</p>
+                                <p id="donNextSync" class="font-medium text-slate-200 text-right">--</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Results -->
+                    <div class="glass-card rounded-2xl p-6 flex items-center justify-around text-center">
+                        <div class="flex-1">
+                            <i data-lucide="circle-check" class="w-6 h-6 text-green-400 mx-auto mb-2"></i>
+                            <p class="text-3xl font-bold text-slate-100" id="donStatCreated">-</p>
+                            <p class="text-[10px] text-slate-500 uppercase mt-1 font-semibold tracking-tight">Created
+                            </p>
+                        </div>
+                        <div class="w-px h-12 bg-slate-700/50"></div>
+                        <div class="flex-1">
+                            <i data-lucide="circle-minus" class="w-6 h-6 text-yellow-400 mx-auto mb-2"></i>
+                            <p class="text-3xl font-bold text-slate-100" id="donStatSkipped">-</p>
+                            <p class="text-[10px] text-slate-500 uppercase mt-1 font-semibold tracking-tight">Skipped
+                            </p>
+                        </div>
+                        <div class="w-px h-12 bg-slate-700/50"></div>
+                        <div class="flex-1">
+                            <i data-lucide="alert-triangle" class="w-6 h-6 text-red-500 mx-auto mb-2"></i>
+                            <p class="text-3xl font-bold text-slate-100" id="donStatErrors">-</p>
+                            <p class="text-[10px] text-slate-500 uppercase mt-1 font-semibold tracking-tight">Errors</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Donation Sync Configuration Card -->
+                <div class="glass-card rounded-2xl p-8 mb-8 mt-8">
+                    <div class="flex items-center justify-between mb-6">
+                        <h3 class="text-base font-semibold text-slate-200 flex items-center gap-2">
+                            <i data-lucide="settings" class="w-5 h-5 text-indigo-400"></i>
+                            Donation Sync Configuration
+                        </h3>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <!-- Transaction Type -->
+                        <div>
+                            <label class="block text-xs font-medium text-slate-400 mb-2 uppercase tracking-wider">QB
+                                Transaction Type</label>
+                            <select id="donTxnType"
+                                class="w-full bg-slate-900/50 border border-slate-700/50 rounded-lg px-3 py-2 text-sm text-slate-300 focus:outline-none focus:border-indigo-500 transition-colors">
+                                <option value="SalesReceipt">Sales Receipt</option>
+                                <option value="Payment">Payment</option>
+                                <option value="Invoice">Invoice</option>
+                                <option value="JournalEntry">Journal Entry</option>
+                            </select>
+                        </div>
+                        <!-- Default Fund -->
+                        <div>
+                            <label
+                                class="block text-xs font-medium text-slate-400 mb-2 uppercase tracking-wider">Default
+                                PCO Fund</label>
+                            <select id="donDefaultFund"
+                                class="w-full bg-slate-900/50 border border-slate-700/50 rounded-lg px-3 py-2 text-sm text-slate-300 focus:outline-none focus:border-indigo-500 transition-colors">
+                                <option value="">Loading funds...</option>
+                            </select>
+                        </div>
+                        <!-- Lookback Days -->
+                        <div>
+                            <label
+                                class="block text-xs font-medium text-slate-400 mb-2 uppercase tracking-wider">Lookback
+                                Days</label>
+                            <input type="number" id="donLookback" value="30" min="1" max="365"
+                                class="w-full bg-slate-900/50 border border-slate-700/50 rounded-lg px-3 py-2 text-sm text-slate-300 focus:outline-none focus:border-indigo-500 transition-colors">
+                        </div>
+                        <!-- Auto-Map Funds -->
+                        <div>
+                            <label class="block text-xs font-medium text-slate-400 mb-2 uppercase tracking-wider">Auto-create PCO Funds</label>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" id="donAutoMap" class="sr-only peer">
+                                <div class="w-11 h-6 bg-slate-700/50 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                                <span class="ml-3 text-xs font-medium text-slate-400">Create unlisted funds if missing</span>
+                            </label>
+                        </div>
+                        <!-- Sync Frequency -->
+                        <div class="md:col-span-1">
+                            <label class="block text-xs font-medium text-slate-400 mb-2 uppercase tracking-wider">Sync
+                                Frequency</label>
+                            <div class="flex items-center gap-1.5 flex-wrap">
+                                <select id="donSyncFreq"
+                                    class="bg-slate-900/50 border border-slate-700/50 rounded-lg px-2 py-1.5 text-xs text-slate-300 focus:outline-none focus:border-indigo-500 transition-colors">
+                                    <option value="manual">Manual Only</option>
+                                    <option value="daily">Daily</option>
+                                    <option value="weekly">Weekly</option>
+                                    <option value="monthly">Monthly</option>
+                                </select>
+                                <select id="donSchedDay"
+                                    class="bg-slate-900/50 border border-slate-700/50 rounded-lg px-2 py-1.5 text-xs text-slate-300 focus:outline-none focus:border-indigo-500 transition-colors hidden"></select>
+                                <span id="donSchedAtLabel" class="text-slate-500 text-xs hidden">at</span>
+                                <select id="donSchedHour"
+                                    class="bg-slate-900/50 border border-slate-700/50 rounded-lg px-2 py-1.5 text-xs text-slate-300 focus:outline-none focus:border-indigo-500 transition-colors hidden"></select>
+                            </div>
+                        </div>
+                        <!-- Notification Email -->
+                        <div class="md:col-span-2">
+                            <label
+                                class="block text-xs font-medium text-slate-400 mb-2 uppercase tracking-wider">Notification
+                                Email</label>
+                            <input type="email" id="donConfirmEmail" placeholder="church-admin@example.com"
+                                class="w-full bg-slate-900/50 border border-slate-700/50 rounded-lg px-3 py-2 text-sm text-slate-300 focus:outline-none focus:border-indigo-500 transition-colors">
+                        </div>
+                    </div>
+
+                    <!-- Product/Service Mapping -->
+                    <div class="mt-6">
+                        <label class="block text-xs font-medium text-slate-400 mb-2 uppercase tracking-wider">Product/Service Mapping</label>
+                        <p class="text-[10px] text-slate-500 mb-3 italic">Map specific QuickBooks Products/Services to Planning Center Funds. Unmapped items use the Default Fund above.</p>
+                        <div id="fundMappingHeader" class="grid grid-cols-[1fr,24px,1fr,40px] gap-3 px-1 mb-2">
+                             <span class="text-[9px] font-bold text-slate-500 uppercase">QuickBooks Item</span>
+                             <span></span>
+                             <span class="text-[9px] font-bold text-slate-500 uppercase">PCO Fund</span>
+                             <span></span>
+                        </div>
+                        <div id="fundMappingContainer" class="space-y-3"></div>
+                        <button onclick="addFundMapping()"
+                            class="mt-4 flex items-center gap-1.5 text-xs text-indigo-400 hover:text-indigo-300 transition-colors bg-indigo-500/5 px-3 py-2 rounded-lg border border-indigo-500/10">
+                            <i data-lucide="plus-circle" class="w-3.5 h-3.5"></i> Add Mapping
+                        </button>
+                    </div>
+
+                    <div class="mt-5 flex justify-end">
+                        <button onclick="saveDonationSettings()" id="saveDonSettingsBtn"
+                            class="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium rounded-xl transition-all flex items-center gap-2 shadow-lg shadow-indigo-900/20 active:scale-95">
+                            <i data-lucide="save" class="w-4 h-4"></i> Save Settings
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Donation Sync Logs Section -->
+                <section class="mt-8">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-xl font-semibold text-slate-200 flex items-center gap-2">
+                            <i data-lucide="terminal-square" class="w-5 h-5 text-indigo-400"></i>
+                            Donation Sync Logs
+                        </h2>
+                        <div class="flex items-center gap-2">
+                            <button onclick="clearLogs('donation')"
+                                class="text-[10px] uppercase tracking-wider font-bold px-3 py-1.5 rounded-lg bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 transition-all border border-rose-500/20 flex items-center gap-2">
+                                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Clear Logs
+                            </button>
+                        </div>
+                    </div>
+                    <div id="donationsLogsContainer" class="space-y-4 pb-12">
+                        <!-- JS will populate accordions here -->
+                        <div class="text-center p-8 text-slate-400">Loading donation logs overview...</div>
+                    </div>
+                </section>
+            </section>
+        </div> <!-- end panel-donations -->
+
+        <!-- Tab: System Settings -->
+        <div id="panel-settings" class="hidden">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 pt-8">
+                <!-- Left Column: Unified Config -->
+                <div class="space-y-6">
+                    <h2 class="text-xl font-semibold text-slate-200 mb-2 flex items-center gap-2">
+                        <i data-lucide="sliders" class="w-5 h-5 text-indigo-400"></i>
+                        System Configuration
+                    </h2>
+
+                    <!-- General Environment Card -->
+                    <div class="glass-card rounded-2xl overflow-hidden">
+                         <button onclick="toggleCard('card-general')" class="w-full px-6 py-4 flex items-center justify-between hover:bg-white/5 transition-colors group">
+                            <div class="flex items-center gap-3">
+                                <i data-lucide="settings" class="w-5 h-5 text-slate-400"></i>
+                                <span class="font-semibold text-slate-200 group-hover:text-white transition-colors">General Settings</span>
+                            </div>
+                            <i data-lucide="chevron-down" class="w-5 h-5 text-slate-500 rotate-icon" id="icon-card-general"></i>
+                        </button>
+                        <div id="card-general" class="collapsible-content px-6 pb-6 space-y-4">
+                            <div class="pt-4 grid grid-cols-1 gap-4" id="env-general">
+                                <!-- Dynamic General Fields -->
+                            </div>
+                            <button onclick="saveEnvSection('general')" class="mt-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-lg transition-colors flex items-center gap-2">
+                                <i data-lucide="save" class="w-3.5 h-3.5"></i> Save General Settings
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- PCO Card -->
+                    <div class="glass-card rounded-2xl overflow-hidden">
+                        <button onclick="toggleCard('card-pco')" class="w-full px-6 py-4 flex items-center justify-between hover:bg-white/5 transition-colors group">
+                            <div class="flex items-center gap-3">
+                                <img src="/static/logos/pco-square.svg" class="w-5 h-5" alt="PCO">
+                                <span class="font-semibold text-slate-200 group-hover:text-white transition-colors">Planning Center (PCO)</span>
+                            </div>
+                            <i data-lucide="chevron-down" class="w-5 h-5 text-slate-500 rotate-icon" id="icon-card-pco"></i>
+                        </button>
+                        <div id="card-pco" class="collapsible-content px-6 pb-6 space-y-4">
+                            <div class="pt-4 grid grid-cols-1 gap-4" id="env-pco">
+                                <!-- Dynamic PCO Fields -->
+                            </div>
+                            <button onclick="saveEnvSection('pco')" class="mt-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-lg transition-colors flex items-center gap-2">
+                                <i data-lucide="save" class="w-3.5 h-3.5"></i> Save PCO Settings
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- QuickBooks Card -->
+                    <div class="glass-card rounded-2xl overflow-hidden">
+                        <button onclick="toggleCard('card-qb')" class="w-full px-6 py-4 flex items-center justify-between hover:bg-white/5 transition-colors group">
+                            <div class="flex items-center gap-3">
+                                <img src="/static/logos/qb-square.svg" class="w-5 h-5" alt="QB">
+                                <span class="font-semibold text-slate-200 group-hover:text-white transition-colors">QuickBooks Online</span>
+                            </div>
+                            <i data-lucide="chevron-down" class="w-5 h-5 text-slate-500 rotate-icon" id="icon-card-qb"></i>
+                        </button>
+                        <div id="card-qb" class="collapsible-content px-6 pb-6 space-y-4">
+                            <div class="pt-4 grid grid-cols-1 gap-4" id="env-qb">
+                                <!-- Dynamic QB Fields -->
+                            </div>
+                            <div class="flex items-center gap-3 mt-4">
+                                <button onclick="saveEnvSection('qb')" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-lg transition-colors flex items-center gap-2">
+                                    <i data-lucide="save" class="w-3.5 h-3.5"></i> Save QB Settings
+                                </button>
+                                <a href="/qb-auth" class="px-4 py-2 bg-green-600 hover:bg-green-500 text-white text-xs font-semibold rounded-lg transition-colors flex items-center gap-2">
+                                    <img src="/static/logos/qb-square.svg" class="w-3.5 h-3.5 brightness-0 invert" alt="QB"> Authorize QuickBooks
+                                </a>
+                                <a href="javascript:void(0)" onclick="openRefreshTokenHelp()" class="text-[10px] text-indigo-400 hover:text-indigo-300 flex items-center gap-1">
+                                    <i data-lucide="help-circle" class="w-3 h-3"></i> How to get a Refresh Token?
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- SMTP Card -->
+                    <div class="glass-card rounded-2xl overflow-hidden">
+                        <button onclick="toggleCard('card-smtp')" class="w-full px-6 py-4 flex items-center justify-between hover:bg-white/5 transition-colors group">
+                            <div class="flex items-center gap-3">
+                                <i data-lucide="mail" class="w-5 h-5 text-indigo-400"></i>
+                                <span class="font-semibold text-slate-200 group-hover:text-white transition-colors">Email (SMTP) Settings</span>
+                            </div>
+                            <i data-lucide="chevron-down" class="w-5 h-5 text-slate-500 rotate-icon" id="icon-card-smtp"></i>
+                        </button>
+                        <div id="card-smtp" class="collapsible-content px-6 pb-6 space-y-4">
+                            <div class="pt-4 grid grid-cols-1 gap-4" id="env-smtp">
+                                <!-- Dynamic SMTP Fields -->
+                            </div>
+                            <button onclick="saveEnvSection('smtp')" class="mt-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-lg transition-colors flex items-center gap-2">
+                                <i data-lucide="save" class="w-3.5 h-3.5"></i> Save Email Settings
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Azure Card -->
+                    <div class="glass-card rounded-2xl overflow-hidden">
+                        <button onclick="toggleCard('card-azure')" class="w-full px-6 py-4 flex items-center justify-between hover:bg-white/5 transition-colors group">
+                            <div class="flex items-center gap-3">
+                                <i data-lucide="shield" class="w-5 h-5 text-indigo-400"></i>
+                                <span class="font-semibold text-slate-200 group-hover:text-white transition-colors">Azure AD / Admin SSO</span>
+                            </div>
+                            <i data-lucide="chevron-down" class="w-5 h-5 text-slate-500 rotate-icon" id="icon-card-azure"></i>
+                        </button>
+                        <div id="card-azure" class="collapsible-content px-6 pb-6 space-y-4">
+                            <div class="pt-4 grid grid-cols-1 gap-4" id="env-azure">
+                                <!-- Dynamic Azure Fields -->
+                            </div>
+                            <button onclick="saveEnvSection('azure')" class="mt-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-lg transition-colors flex items-center gap-2">
+                                <i data-lucide="save" class="w-3.5 h-3.5"></i> Save SSO Settings
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Column: Admin Access & General -->
+                <div class="space-y-6">
+                    <h2 class="text-xl font-semibold text-slate-200 mb-2 flex items-center gap-2">
+                        <i data-lucide="lock" class="w-5 h-5 text-indigo-400"></i>
+                        Admin Access Management
+                    </h2>
+
+                    <!-- Admin Access Card -->
+                    <div class="glass-card rounded-2xl p-6 space-y-6">
+                        <div class="flex items-center justify-between">
+                            <div class="space-y-1">
+                                <h3 class="text-sm font-semibold text-slate-200">Local Admin Login</h3>
+                                <p class="text-xs text-slate-500">Allow logging in with local username/password</p>
+                            </div>
+                            <button onclick="toggleLocalLogin()" id="settingsLocalLoginToggle"
+                                class="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none bg-indigo-600">
+                                <span id="settingsLocalLoginToggleDot"
+                                    class="pointer-events-none inline-block h-5 w-5 translate-x-6 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"></span>
+                            </button>
+                        </div>
+
+                        <div class="space-y-4 pt-4 border-t border-slate-700/50">
+                            <h3 class="text-sm font-semibold text-slate-200">Change Admin Password</h3>
+                            <div class="space-y-3">
+                                <div class="space-y-1.5">
+                                    <label class="text-[10px] font-bold text-slate-500 uppercase">New Password</label>
+                                    <div class="relative">
+                                        <input type="password" id="settingsNewLocalPassword"
+                                            class="w-full bg-slate-900/50 border border-slate-700/50 rounded-xl px-4 py-2.5 text-slate-200 focus:outline-none focus:border-indigo-500 transition-colors pr-10"
+                                            placeholder="••••••••">
+                                        <button onclick="togglePassword('settingsNewLocalPassword')"
+                                            class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300">
+                                            <i data-lucide="eye" class="w-4 h-4"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="space-y-1.5">
+                                    <label class="text-[10px] font-bold text-slate-500 uppercase">Confirm Password</label>
+                                    <div class="relative">
+                                        <input type="password" id="settingsConfirmLocalPassword"
+                                            class="w-full bg-slate-900/50 border border-slate-700/50 rounded-xl px-4 py-2.5 text-slate-200 focus:outline-none focus:border-indigo-500 transition-colors pr-10"
+                                            placeholder="••••••••">
+                                        <button onclick="togglePassword('settingsConfirmLocalPassword')"
+                                            class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300">
+                                            <i data-lucide="eye" class="w-4 h-4"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <button id="saveAdminSettingsBtn" onclick="saveLocalSettings()"
+                            class="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium transition-all active:scale-[0.98]">
+                            <i data-lucide="save" class="w-4 h-4"></i>
+                            Save Admin Settings
+                        </button>
+                    </div>
+
+                    <!-- Admin Login History Card -->
+                    <div class="glass-card rounded-2xl overflow-hidden">
+                        <button onclick="toggleCard('card-login-history'); loadAdminLogins();" class="w-full px-6 py-4 flex items-center justify-between hover:bg-white/5 transition-colors group">
+                            <div class="flex items-center gap-3">
+                                <i data-lucide="history" class="w-5 h-5 text-indigo-400"></i>
+                                <span class="font-semibold text-slate-200 group-hover:text-white transition-colors">Admin Login History</span>
+                            </div>
+                            <i data-lucide="chevron-down" class="w-5 h-5 text-slate-500 rotate-icon" id="icon-card-login-history"></i>
+                        </button>
+                        <div id="card-login-history" class="collapsible-content px-6 pb-6">
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-left">
+                                    <thead>
+                                        <tr class="border-b border-slate-800">
+                                            <th class="px-2 py-3 text-[10px] uppercase font-bold text-slate-500 tracking-wider">User</th>
+                                            <th class="px-2 py-3 text-[10px] uppercase font-bold text-slate-500 tracking-wider">Time</th>
+                                            <th class="px-2 py-3 text-[10px] uppercase font-bold text-slate-500 tracking-wider">IP Address</th>
+                                            <th class="px-2 py-3 text-[10px] uppercase font-bold text-slate-500 tracking-wider text-right">Method</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="adminLoginTableBody" class="divide-y divide-slate-800">
+                                        <!-- Dynamic Content -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div> <!-- end max-w container -->
+
+    <!-- Member History Modal -->
+    <div id="memberModal" class="fixed inset-0 z-50 hidden">
+        <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" onclick="closeMemberModal()"></div>
+        <div
+            class="absolute right-0 top-0 h-full w-full max-w-lg bg-slate-900 border-l border-slate-700/50 shadow-2xl overflow-y-auto">
+            <div
+                class="sticky top-0 bg-slate-900/95 backdrop-blur-sm border-b border-slate-700/30 px-6 py-4 flex items-center justify-between">
+                <div>
+                    <h3 id="modalMemberName" class="text-lg font-semibold text-slate-200"></h3>
+                    <p id="modalMemberID" class="text-xs text-slate-500 mt-0.5"></p>
+                </div>
+                <button onclick="closeMemberModal()"
+                    class="p-2 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition-colors">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <div id="modalTimeline" class="px-6 py-4">
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Tab Switching
+        function switchTab(tab) {
+            document.getElementById('panel-sync').classList.toggle('hidden', tab !== 'sync');
+            document.getElementById('panel-members').classList.toggle('hidden', tab !== 'members');
+            document.getElementById('panel-donations').classList.toggle('hidden', tab !== 'donations');
+            document.getElementById('panel-settings').classList.toggle('hidden', tab !== 'settings');
+
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.className = 'tab-btn px-5 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 text-slate-400 hover:text-slate-200';
+            });
+            document.getElementById(`tab-${tab}`).className = 'tab-btn px-5 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 bg-indigo-600/20 text-indigo-300';
+            lucide.createIcons();
+
+            if (tab === 'members') fetchMembers();
+            if (tab === 'donations') { fetchDonationStatus(); loadDonationSettings(); }
+            if (tab === 'settings') {
+                loadEnvironmentConfig();
+                loadLocalAdminSettings();
+            }
+        }
+
+        // State
+        let logsList = [];
+        let activeLog = null;
+        let donationLogsList = [];
+        let activeDonationLog = null;
+        let isFirstLoadMember = true;
+        let isFirstLoadDonation = true;
+        let pcoFunds = []; // Array of {id, name}
+        let qbAccountsItems = []; // Array of {name, type}
+
+        async function fetchPCOFunds() {
+            if (pcoFunds.length > 0) return pcoFunds;
+            try {
+                const res = await fetch('/api/pco-funds');
+                pcoFunds = await res.json();
+                return pcoFunds;
+            } catch (e) {
+                console.error('Failed to fetch PCO funds:', e);
+                return [];
+            }
+        }
+
+        async function fetchQBAccountsItems() {
+            if (qbAccountsItems.length > 0) return qbAccountsItems;
+            try {
+                const res = await fetch('/api/qb-accounts-items');
+                qbAccountsItems = await res.json();
+                return qbAccountsItems;
+            } catch (e) {
+                console.error('Failed to fetch QB entities:', e);
+                return [];
+            }
+        }
+        let autoScrollState = {}; // { filename: boolean }
+        let logContentCache = {}; // { filename: text }
+
+        // Elements
+        const syncNowBtn = document.getElementById('syncNowBtn');
+        const syncNowText = document.getElementById('syncNowText');
+        const syncNowIcon = document.getElementById('syncNowIcon');
+        const logsContainer = document.getElementById('logsContainer');
+        const donationsLogsContainer = document.getElementById('donationsLogsContainer');
+
+        // Formatter utilities
+        const formatLogDate = (logFilename) => {
+            const match = logFilename.match(/(?:donations_)?sync_(\d{4})(\d{2})(\d{2})_(\d{2})(\d{2})(\d{2})/);
+            const prefix = logFilename.startsWith('donations_') ? 'Donation Sync' : 'Member Sync';
+            if (match) {
+                const year = match[1], month = parseInt(match[2]) - 1, day = match[3];
+                const hour = match[4], min = match[5], sec = match[6];
+                const d = new Date(year, month, day, hour, min, sec);
+                return `${prefix} — ` + formatDate(d.toISOString());
+            }
+            return logFilename;
+        };
+
+        const formatDate = (isoStr) => {
+            if (!isoStr) return '--';
+            const d = new Date(isoStr);
+            if (isNaN(d.getTime())) return isoStr;
+            // Standardizing to: Mon Mar 24, 9:28:30 PM
+            return d.toLocaleString('en-US', {
+                weekday: 'short',
+                month: 'short',
+                day: 'numeric',
+                hour: 'numeric',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: true
+            });
+        };
+
+        const syntaxHighlightLog = (text) => {
+            if (!text) return '';
+            const escaped = text.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+            return escaped.split('\n').map(line => {
+                let colorClass = 'text-slate-300';
+                if (line.includes('- ERROR -') || line.includes('FATAL ERROR')) {
+                    colorClass = 'text-red-400 font-medium';
+                } else if (line.includes('- WARNING -')) {
+                    colorClass = 'text-amber-400';
+                } else if (line.includes('- INFO -')) {
+                    colorClass = 'text-blue-300';
+                } else if (line.includes('- DEBUG -')) {
+                    colorClass = 'text-slate-500';
+                }
+                return `<div class="log-line ${colorClass}">${line || ' '}</div>`;
+            }).join('');
+        };
+
+        const updateStatusUI = (status) => {
+            if (!status) return;
+            const indicator = document.getElementById('statusIndicator');
+            const text = document.getElementById('statusText');
+
+            indicator.className = 'w-1.5 h-1.5 rounded-full';
+            text.className = 'text-[11px] font-bold uppercase tracking-wider text-right transition-colors duration-500';
+
+            let statusLabel = 'Member Sync: ';
+            if (status.status === 'Running') {
+                indicator.classList.add('bg-blue-400', 'pulse-indicator');
+                text.classList.add('text-blue-400');
+                text.innerText = statusLabel + 'Active';
+            } else if (status.status === 'Success') {
+                indicator.classList.add('bg-green-400');
+                text.classList.add('text-slate-500');
+                text.innerText = statusLabel + 'Idle';
+            } else if (status.status === 'Failed') {
+                indicator.classList.add('bg-red-500');
+                text.classList.add('text-red-400');
+                text.innerText = statusLabel + 'Failed';
+            } else if (status.error) {
+                indicator.classList.add('bg-red-500');
+                text.classList.add('text-red-400');
+                text.innerText = statusLabel + 'Error';
+            } else {
+                indicator.classList.add('bg-slate-600');
+                text.classList.add('text-slate-500');
+                text.innerText = statusLabel + (status.status || 'Idle');
+            }
+
+            // Auto-reset Sync Button if not running
+            if (status.status !== 'Running') {
+                syncNowBtn.disabled = false;
+                syncNowText.innerText = "Run Member Sync";
+                syncNowIcon.setAttribute('data-lucide', 'play');
+                syncNowIcon.classList.remove('animate-spin');
+                lucide.createIcons();
+            }
+
+            const setElText = (id, val) => {
+                const el = document.getElementById(id);
+                if (el) el.innerText = val;
+            };
+
+            const summary = status.last_summary || {};
+            setElText('statCreated', summary.created !== undefined ? summary.created : '-');
+            setElText('statUpdated', summary.updated !== undefined ? summary.updated : '-');
+            setElText('statErrors', summary.errors !== undefined ? summary.errors : '-');
+            setElText('startTime', formatDate(summary.start_time));
+            setElText('endTime', formatDate(summary.end_time));
+
+            if (summary.start_time && summary.end_time) {
+                const s = new Date(summary.start_time);
+                const e = new Date(summary.end_time);
+                setElText('durationTime', Math.round((e - s) / 1000) + ' sec');
+            } else {
+                setElText('durationTime', '--');
+            }
+        };
+
+        const rebuildLogsUI = (container, list, active, type = 'member') => {
+            if (!list || list.length === 0) {
+                container.innerHTML = `<div class="text-center p-12 text-slate-500 bg-slate-800/10 rounded-2xl border border-dashed border-slate-700/30 flex flex-col items-center gap-3">
+                    <i data-lucide="ghost" class="w-8 h-8 opacity-20"></i>
+                    <p class="text-xs font-semibold uppercase tracking-widest opacity-60">No sync logs found</p>
+                </div>`;
+                lucide.createIcons();
+                return;
+            }
+            const safeId = (log) => log.replace(/[^a-zA-Z0-9_-]/g, '_');
+            const toggleFunc = type === 'donation' ? 'toggleDonationLog' : 'toggleLog';
+
+            container.innerHTML = list.map(log => {
+                const id = safeId(log);
+                const readableDate = formatLogDate(log);
+                return `
+                <div class="glass-card rounded-xl overflow-hidden transition-all duration-300" id="accordion-${id}">
+                    <button class="w-full px-6 py-4 flex justify-between items-center bg-slate-800/40 hover:bg-slate-700/40 transition-colors" onclick="${toggleFunc}('${log}')">
+                        <span class="font-medium text-slate-200 flex items-center gap-3">
+                            <i data-lucide="file-text" class="w-5 h-5 text-indigo-400"></i> ${readableDate}
+                        </span>
+                        <i data-lucide="chevron-down" class="w-5 h-5 text-slate-500 transition-transform duration-300" id="chevron-${id}"></i>
+                    </button>
+                    <!-- Body: hidden by default -->
+                    <div id="body-${id}" class="hidden flex-col h-[500px] border-t border-slate-700/50">
+                        <!-- Toolbar -->
+                        <div class="px-4 py-3 bg-slate-900/60 border-b border-slate-700/50 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                            <div class="relative w-full max-w-md">
+                                <i data-lucide="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"></i>
+                                <input type="text" id="search-${id}" placeholder="Keyword search..." class="w-full bg-slate-800/50 border border-slate-700 text-slate-200 text-sm rounded-lg pl-9 pr-3 py-2 outline-none focus:border-indigo-500 transition-colors" oninput="searchLog('${log}')">
+                            </div>
+                            <button class="text-xs font-medium px-3 py-1.5 rounded-full bg-indigo-500/20 text-indigo-300 hover:bg-indigo-500/30 transition-colors flex items-center gap-2 shrink-0" id="autoScrollBtn-${id}" onclick="toggleAutoScroll('${log}')">
+                                <div class="w-2 h-2 rounded-full bg-indigo-400" id="autoScrollDot-${id}"></div>
+                                Auto-scroll
+                            </button>
+                        </div>
+                        <!-- Viewer -->
+                         <div class="flex-1 p-4 overflow-auto bg-slate-900/80 relative" id="scrollContainer-${id}" onscroll="handleScroll('${log}')">
+                            <div id="loader-${id}" class="absolute inset-0 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm z-10 hidden">
+                                <i data-lucide="loader-2" class="w-8 h-8 text-indigo-500 animate-spin"></i>
+                            </div>
+                            <pre id="pre-${id}" class="text-slate-300 whitespace-pre-wrap break-words text-xs sm:text-sm font-mono leading-relaxed">Loading...</pre>
+                        </div>
+                    </div>
+                </div>
+            `}).join('');
+            lucide.createIcons();
+
+            // Re-open active log if it still exists
+            if (active && list.includes(active)) {
+                openAccordionDOM(active);
+            }
+        };
+
+        const safeId = (log) => log.replace(/[^a-zA-Z0-9_-]/g, '_');
+
+        const openAccordionDOM = (log) => {
+            const id = safeId(log);
+            const body = document.getElementById(`body-${id}`);
+            const chevron = document.getElementById(`chevron-${id}`);
+            if (body && chevron) {
+                body.classList.remove('hidden');
+                body.classList.add('flex');
+                chevron.classList.add('rotate-180');
+            }
+        };
+
+        const toggleLog = (log, scroll = false, forceOpen = false) => {
+            const id = safeId(log);
+            if (activeLog === log && !forceOpen) {
+                const body = document.getElementById(`body-${id}`);
+                if (body) {
+                    body.classList.remove('flex');
+                    body.classList.add('hidden');
+                }
+                const chevron = document.getElementById(`chevron-${id}`);
+                if (chevron) chevron.classList.remove('rotate-180');
+                activeLog = null;
+                return;
+            }
+            if (activeLog && activeLog !== log) {
+                const oldId = safeId(activeLog);
+                const oldBody = document.getElementById(`body-${oldId}`);
+                const oldChevron = document.getElementById(`chevron-${oldId}`);
+                if (oldBody) { oldBody.classList.remove('flex'); oldBody.classList.add('hidden'); }
+                if (oldChevron) oldChevron.classList.remove('rotate-180');
+            }
+            activeLog = log;
+            openAccordionDOM(log);
+            if (autoScrollState[log] === undefined) autoScrollState[log] = true;
+            updateAutoScrollUI(log);
+            fetchLog(log);
+
+            if (scroll) {
+                setTimeout(() => {
+                    const el = document.getElementById(`accordion-${id}`);
+                    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }, 100);
+            }
+        };
+
+        const toggleDonationLog = (log, scroll = false, forceOpen = false) => {
+            const id = safeId(log);
+            if (activeDonationLog === log && !forceOpen) {
+                const body = document.getElementById(`body-${id}`);
+                if (body) {
+                    body.classList.remove('flex');
+                    body.classList.add('hidden');
+                }
+                const chevron = document.getElementById(`chevron-${id}`);
+                if (chevron) chevron.classList.remove('rotate-180');
+                activeDonationLog = null;
+                return;
+            }
+            if (activeDonationLog && activeDonationLog !== log) {
+                const oldId = safeId(activeDonationLog);
+                const oldBody = document.getElementById(`body-${oldId}`);
+                const oldChevron = document.getElementById(`chevron-${oldId}`);
+                if (oldBody) { oldBody.classList.remove('flex'); oldBody.classList.add('hidden'); }
+                if (oldChevron) oldChevron.classList.remove('rotate-180');
+            }
+            activeDonationLog = log;
+            openAccordionDOM(log);
+            if (autoScrollState[log] === undefined) autoScrollState[log] = true;
+            updateAutoScrollUI(log);
+            fetchLog(log);
+
+            if (scroll) {
+                setTimeout(() => {
+                    const el = document.getElementById(`accordion-${id}`);
+                    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }, 100);
+            }
+        };
+
+        const searchLog = (log) => {
+            const id = safeId(log);
+            const term = document.getElementById(`search-${id}`).value.toLowerCase();
+            const pre = document.getElementById(`pre-${id}`);
+            if (!pre) return;
+
+            const lines = pre.querySelectorAll('.log-line');
+            lines.forEach(line => {
+                if (!term || line.textContent.toLowerCase().includes(term)) {
+                    line.style.display = 'block';
+                } else {
+                    line.style.display = 'none';
+                }
+            });
+        };
+
+        const toggleAutoScroll = (log) => {
+            autoScrollState[log] = !autoScrollState[log];
+            updateAutoScrollUI(log);
+            if (autoScrollState[log]) {
+                const id = safeId(log);
+                const container = document.getElementById(`scrollContainer-${id}`);
+                if (container) container.scrollTop = container.scrollHeight;
+            }
+        };
+
+        const updateAutoScrollUI = (log) => {
+            const id = safeId(log);
+            const btn = document.getElementById(`autoScrollBtn-${id}`);
+            const dot = document.getElementById(`autoScrollDot-${id}`);
+            if (!btn || !dot) return;
+
+            if (autoScrollState[log]) {
+                btn.className = "text-xs font-medium px-3 py-1.5 rounded-full bg-indigo-500/20 text-indigo-300 hover:bg-indigo-500/30 transition-colors flex items-center gap-2 shrink-0";
+                dot.className = "w-2 h-2 rounded-full bg-indigo-400";
+            } else {
+                btn.className = "text-xs font-medium px-3 py-1.5 rounded-full bg-slate-500/20 text-slate-400 hover:bg-slate-500/30 transition-colors flex items-center gap-2 shrink-0";
+                dot.className = "w-2 h-2 rounded-full bg-slate-500";
+            }
+        };
+
+        const handleScroll = (log) => {
+            const id = safeId(log);
+            const container = document.getElementById(`scrollContainer-${id}`);
+            // If user scrolls up, turn off autoscroll
+            if (autoScrollState[log] && container.scrollTop < container.scrollHeight - container.clientHeight - 50) {
+                toggleAutoScroll(log);
+            }
+        };
+
+        const fetchLog = async (filename, silent = false) => {
+            if (!filename) return;
+            const id = safeId(filename);
+            const loader = document.getElementById(`loader-${id}`);
+            const pre = document.getElementById(`pre-${id}`);
+            const container = document.getElementById(`scrollContainer-${id}`);
+
+            if (!pre) return;
+            if (!silent && loader) loader.classList.remove('hidden');
+
+            try {
+                const authQuery = window.location.search;
+                let url = `/api/logs/${encodeURIComponent(filename)}${authQuery}`;
+                if (!window.location.pathname.includes('/api/dashboard')) {
+                    let basePath = window.location.pathname.replace('/dashboard', '');
+                    if (basePath === '/') basePath = '';
+                    url = `${basePath}/api/logs/${encodeURIComponent(filename)}${authQuery}`;
+                }
+
+                const res = await fetch(url);
+                if (res.ok) {
+                    const text = await res.text();
+                    if (logContentCache[filename] !== text) {
+                        logContentCache[filename] = text;
+                        pre.innerHTML = syntaxHighlightLog(text);
+                        // Re-apply search filter
+                        searchLog(filename);
+
+                        if (autoScrollState[filename] && container) {
+                            container.scrollTop = container.scrollHeight;
+                        }
+                    }
+                } else {
+                    if (!silent) pre.innerHTML = `<span class="text-red-400">Failed to load: HTTP ${res.status}</span>`;
+                }
+            } catch (err) {
+                if (!silent) pre.innerHTML = `<span class="text-red-400">Error: ${err.message}</span>`;
+            } finally {
+                if (!silent && loader) loader.classList.add('hidden');
+            }
+        };
+
+        const fetchStatus = async () => {
+            try {
+                const url = window.location.pathname.includes('/api/dashboard')
+                    ? '/api/status' + window.location.search : '/api/status';
+
+                const res = await fetch(url);
+                if (res.status === 401) {
+                    window.location.href = '/login';
+                    return;
+                }
+                const data = await res.json();
+
+                // Pass status (including potential error) to UI update function
+                if (data.status) {
+                    updateStatusUI(data.status);
+                }
+
+                if (data.schedule) {
+                    parseCronToUI(data.schedule);
+                    currentScheduleCron = data.schedule;
+                }
+
+                if (data.next_run) {
+                    document.getElementById('nextSyncTime').innerText = formatDate(data.next_run);
+                } else {
+                    document.getElementById('nextSyncTime').innerText = '--';
+                }
+
+                if (data.next_run) {
+                    document.getElementById('nextSyncTime').innerText = formatDate(data.next_run);
+                } else {
+                    document.getElementById('nextSyncTime').innerText = '--';
+                }
+
+                if (data.recipient_email !== undefined) {
+                    const emailInput = document.getElementById('emailInput');
+                    if (document.activeElement !== emailInput) {
+                        emailInput.value = data.recipient_email;
+                        emailInput.dataset.original = data.recipient_email;
+                    }
+                }
+
+                if (data.pco_list_id !== undefined) {
+                    const listInput = document.getElementById('pcoListIdInput');
+                    if (listInput) listInput.value = data.pco_list_id;
+                }
+
+                if (data.display_name_format !== undefined) {
+                    const dnInput = document.getElementById('displayNameFormatInput');
+                    if (document.activeElement !== dnInput) {
+                        dnInput.value = data.display_name_format;
+                        dnInput.dataset.original = data.display_name_format;
+                        if (typeof updateDNPreview === 'function') updateDNPreview();
+                    }
+                }
+
+                if (data.logs && Array.isArray(data.logs)) {
+                    if (JSON.stringify(data.logs) !== JSON.stringify(logsList || []) || isFirstLoadMember) {
+                        isFirstLoadMember = false;
+                        const currentList = logsList || [];
+                        const isNewLogAtTop = currentList.length > 0 && data.logs[0] !== currentList[0];
+                        logsList = data.logs;
+                        rebuildLogsUI(logsContainer, logsList, activeLog, 'member');
+
+                        // Open latest log on initial load if none active
+                        if (!activeLog && logsList && logsList.length > 0) {
+                            toggleLog(logsList[0], false, true); // No scroll on first load
+                        } else if (isNewLogAtTop && data.status && (data.status.status === 'Running' || data.status.status === 'Syncing')) {
+                            // Automatically switch to the newly created log when sync starts
+                            toggleLog(logsList[0], true, true);
+                        }
+                    }
+
+                    // Periodically refresh the open log if a sync is active
+                    if (data.status && data.status.status === 'Running' && activeLog) {
+                        fetchLog(activeLog, true);
+                    }
+                }
+            } catch (err) {
+                console.error("Failed to fetch Member status:", err);
+                const statusText = document.getElementById('statusText');
+                if (statusText) statusText.innerText = 'Member Sync: Error';
+                const ind = document.getElementById('statusIndicator');
+                if (ind) {
+                    ind.className = 'w-1.5 h-1.5 rounded-full bg-red-500';
+                }
+            }
+        };
+
+        const fetchUserInfo = async () => {
+            try {
+                const res = await fetch('/api/me');
+                if (res.ok) {
+                    const user = await res.json();
+                    const nameEl = document.getElementById('userName');
+                    const emailEl = document.getElementById('userEmail');
+                    const initialEl = document.getElementById('userInitial');
+                    const profileEl = document.getElementById('userProfile');
+
+                    if (nameEl) nameEl.innerText = user.name || 'User';
+                    if (emailEl) emailEl.innerText = user.email || '';
+                    if (initialEl) initialEl.innerText = (user.name || 'U').charAt(0).toUpperCase();
+                    if (profileEl) profileEl.classList.remove('hidden');
+
+                    if (user.is_sso) {
+                        const trigger = document.getElementById('localSettingsTrigger');
+                        if (trigger) trigger.classList.remove('hidden');
+                    }
+                }
+            } catch (err) {
+                console.error('User info fetch failed:', err);
+            }
+        };
+
+        // Initialize
+        fetchUserInfo();
+        fetchStatus();
+        fetchDonationStatus();
+
+        syncNowBtn.addEventListener('click', async () => {
+            syncNowBtn.disabled = true;
+            syncNowText.innerText = "Starting...";
+            syncNowIcon.setAttribute('data-lucide', 'loader-2');
+            syncNowIcon.classList.add('animate-spin');
+            lucide.createIcons();
+
+            try {
+                const url = `/api/sync-now${window.location.search}`;
+                const res = await fetch(url, { method: 'POST' });
+                if (res.ok) setTimeout(fetchStatus, 500);
+            } finally {
+                setTimeout(() => {
+                    syncNowBtn.disabled = false;
+                    syncNowText.innerText = "Run Sync Now";
+                    syncNowIcon.setAttribute('data-lucide', 'play');
+                    syncNowIcon.classList.remove('animate-spin');
+                    lucide.createIcons();
+                }, 2000);
+            }
+        });
+
+        // ── Schedule Configuration Logic ──────────────────────────────────
+        const schedFrequency = document.getElementById('schedFrequency');
+        const schedDay = document.getElementById('schedDay');
+        const schedHour = document.getElementById('schedHour');
+        const saveScheduleBtn = document.getElementById('saveScheduleBtn');
+        let currentScheduleCron = '';
+
+        // Populate the hour dropdown (12 AM – 11 PM)
+        for (let h = 0; h < 24; h++) {
+            const lbl = h === 0 ? '12:00 AM' : h < 12 ? `${h}:00 AM` : h === 12 ? '12:00 PM' : `${h - 12}:00 PM`;
+            schedHour.insertAdjacentHTML('beforeend', `<option value="${h}">${lbl}</option>`);
+        }
+
+        function populateDayDropdown() {
+            const freq = schedFrequency.value;
+            schedDay.innerHTML = '';
+            if (freq === 'weekly') {
+                const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+                days.forEach((d, i) => schedDay.insertAdjacentHTML('beforeend', `<option value="${i}">${d}</option>`));
+                schedDay.classList.remove('hidden');
+            } else if (freq === 'monthly') {
+                for (let d = 1; d <= 28; d++) {
+                    const suffix = d === 1 ? 'st' : d === 2 ? 'nd' : d === 3 ? 'rd' : 'th';
+                    schedDay.insertAdjacentHTML('beforeend', `<option value="${d}">${d}${suffix}</option>`);
+                }
+                schedDay.classList.remove('hidden');
+            } else {
+                schedDay.classList.add('hidden');
+            }
+        }
+
+        function buildCronFromUI() {
+            const freq = schedFrequency.value;
+            const hour = schedHour.value;
+            const day = schedDay.value;
+            // Azure-style 6-field: sec min hour day month dow
+            if (freq === 'daily') return `0 0 ${hour} * * *`;
+            if (freq === 'weekly') return `0 0 ${hour} * * ${day}`;
+            if (freq === 'monthly') return `0 0 ${hour} ${day} * *`;
+            return `0 0 ${hour} * * *`;
+        }
+
+        function parseCronToUI(cron) {
+            const p = cron.split(' ');
+            if (p.length !== 6) return;
+            const [, , hour, dayOfMonth, , dayOfWeek] = p;
+            schedHour.value = hour;
+            if (dayOfWeek !== '*') {
+                schedFrequency.value = 'weekly';
+                populateDayDropdown();
+                schedDay.value = dayOfWeek;
+            } else if (dayOfMonth !== '*') {
+                schedFrequency.value = 'monthly';
+                populateDayDropdown();
+                schedDay.value = dayOfMonth;
+            } else {
+                schedFrequency.value = 'daily';
+                populateDayDropdown();
+            }
+        }
+
+        function scheduleUIFocused() {
+            return [schedFrequency, schedDay, schedHour].includes(document.activeElement);
+        }
+
+
+        schedFrequency.addEventListener('change', () => { populateDayDropdown(); });
+        schedDay.addEventListener('change', () => { });
+        schedHour.addEventListener('change', () => { });
+        populateDayDropdown(); // initial render
+
+        // ── Donation Sync Scheduling ──────────────────────────────────────
+        const donSyncFreq = document.getElementById('donSyncFreq');
+        const donSchedDay = document.getElementById('donSchedDay');
+        const donSchedHour = document.getElementById('donSchedHour');
+        const donSchedAtLabel = document.getElementById('donSchedAtLabel');
+
+        for (let h = 0; h < 24; h++) {
+            const lbl = h === 0 ? '12:00 AM' : h < 12 ? `${h}:00 AM` : h === 12 ? '12:00 PM' : `${h - 12}:00 PM`;
+            donSchedHour.insertAdjacentHTML('beforeend', `<option value="${h}">${lbl}</option>`);
+        }
+
+        function populateDonDayDropdown() {
+            const freq = donSyncFreq.value;
+            donSchedDay.innerHTML = '';
+            if (freq === 'weekly') {
+                const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+                days.forEach((d, i) => donSchedDay.insertAdjacentHTML('beforeend', `<option value="${i}">${d}</option>`));
+                donSchedDay.classList.remove('hidden');
+                donSchedAtLabel.classList.remove('hidden');
+                donSchedHour.classList.remove('hidden');
+            } else if (freq === 'monthly') {
+                for (let d = 1; d <= 28; d++) {
+                    const suffix = d === 1 ? 'st' : d === 2 ? 'nd' : d === 3 ? 'rd' : 'th';
+                    donSchedDay.insertAdjacentHTML('beforeend', `<option value="${d}">${d}${suffix}</option>`);
+                }
+                donSchedDay.classList.remove('hidden');
+                donSchedAtLabel.classList.remove('hidden');
+                donSchedHour.classList.remove('hidden');
+            } else if (freq === 'daily') {
+                donSchedDay.classList.add('hidden');
+                donSchedAtLabel.classList.remove('hidden');
+                donSchedHour.classList.remove('hidden');
+            } else {
+                donSchedDay.classList.add('hidden');
+                donSchedAtLabel.classList.add('hidden');
+                donSchedHour.classList.add('hidden');
+            }
+        }
+
+        donSyncFreq.addEventListener('change', populateDonDayDropdown);
+        populateDonDayDropdown();
+
+        function buildDonCronFromUI() {
+            const freq = donSyncFreq.value;
+            if (freq === 'manual') return 'manual';
+            const hour = donSchedHour.value;
+            const day = donSchedDay.value;
+            if (freq === 'daily') return `0 0 ${hour} * * *`;
+            if (freq === 'weekly') return `0 0 ${hour} * * ${day}`;
+            if (freq === 'monthly') return `0 0 ${hour} ${day} * *`;
+            return 'manual';
+        }
+
+        function setupDonCronUI(cron) {
+            if (!cron || cron === 'manual') {
+                donSyncFreq.value = 'manual';
+                populateDonDayDropdown();
+                return;
+            }
+            const p = cron.split(' ');
+            if (p.length !== 6) {
+                donSyncFreq.value = 'manual';
+                populateDonDayDropdown();
+                return;
+            }
+            const [, , hour, dayOfMonth, , dayOfWeek] = p;
+            donSchedHour.value = hour;
+            if (dayOfWeek !== '*') {
+                donSyncFreq.value = 'weekly';
+                populateDonDayDropdown();
+                donSchedDay.value = dayOfWeek;
+            } else if (dayOfMonth !== '*') {
+                donSyncFreq.value = 'monthly';
+                populateDonDayDropdown();
+                donSchedDay.value = dayOfMonth;
+            } else {
+                donSyncFreq.value = 'daily';
+                populateDonDayDropdown();
+            }
+        }
+
+        async function saveMemberSettings() {
+            const btn = document.getElementById('saveMemberSettingsBtn');
+            const origHTML = btn.innerHTML;
+            btn.innerHTML = '<i data-lucide="loader" class="w-4 h-4 animate-spin"></i> Saving...';
+            btn.disabled = true;
+
+            const settings = {
+                sync_frequency: buildCronFromUI(),
+                notification_email: document.getElementById('emailInput').value.trim(),
+                pco_list_id: document.getElementById('pcoListIdInput').value.trim(),
+                display_name_format: document.getElementById('displayNameFormatInput').value.trim()
+            };
+
+            try {
+                const resp = await fetch('/api/member-sync-settings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(settings)
+                });
+                if (resp.ok) {
+                    btn.innerHTML = '<i data-lucide="check" class="w-4 h-4"></i> Saved Successfully';
+                    btn.classList.replace('bg-indigo-600', 'bg-green-600');
+                    setTimeout(() => {
+                        btn.innerHTML = origHTML;
+                        btn.classList.replace('bg-green-600', 'bg-indigo-600');
+                        btn.disabled = false;
+                    }, 3000);
+                    // Update original data markers for changed detection if we still want it
+                    emailInput.dataset.original = settings.notification_email;
+                    document.getElementById('displayNameFormatInput').dataset.original = settings.display_name_format;
+                    currentScheduleCron = settings.sync_frequency;
+                } else {
+                    const err = await resp.json();
+                    alert('Failed to save: ' + (err.error || 'Unknown error'));
+                    btn.innerHTML = origHTML;
+                    btn.disabled = false;
+                }
+            } catch (e) {
+                console.error(e);
+                alert('Connection error while saving settings.');
+                btn.innerHTML = origHTML;
+                btn.disabled = false;
+            }
+        }
+
+        // Notification Email Logic
+        const emailInput = document.getElementById('emailInput');
+
+        // ── Display Name Format Logic ─────────────────────────────────────
+        function insertFieldCode(code) {
+            const input = document.getElementById('displayNameFormatInput');
+            const start = input.selectionStart;
+            const end = input.selectionEnd;
+            const text = input.value;
+            input.value = text.substring(0, start) + code + text.substring(end);
+            input.focus();
+            input.setSelectionRange(start + code.length, start + code.length);
+            updateDNPreview();
+        }
+
+        function updateDNPreview() {
+            const input = document.getElementById('displayNameFormatInput');
+            const preview = document.getElementById('displayNamePreview');
+            const fmt = input.value || '{first_name} {last_name}';
+            const sample = {
+                'first_name': 'John',
+                'middle_name': 'Quincy',
+                'last_name': 'Smith',
+                'nickname': 'Jay',
+                'prayer_group': 'Alpha'
+            };
+            let out = fmt;
+            for (const [key, val] of Object.entries(sample)) {
+                out = out.replace(new RegExp(`\\{${key}\\}`, 'g'), val);
+            }
+            // Clean up: empty parens, double dashes, leading/trailing space/dashes
+            out = out.replace(/\(\s*\)/g, '').replace(/-\s*-/g, '-').replace(/-\s*$/g, '').replace(/^\s*-/g, '').replace(/\s+/g, ' ').trim();
+            preview.innerText = out || '---';
+        }
+
+        updateDNPreview();
+
+        document.getElementById('displayNameFormatInput').addEventListener('input', () => {
+            updateDNPreview();
+        });
+
+        // ── Member History Logic ──────────────────────────────────────────
+        let memberData = {};
+        let memberSortField = 'name';
+        let memberSortOrder = 1; // 1: asc, -1: desc
+
+        function setMemberSort(field) {
+            if (memberSortField === field) {
+                memberSortOrder *= -1;
+            } else {
+                memberSortField = field;
+                memberSortOrder = 1;
+            }
+            renderMemberTable(document.getElementById('memberSearch').value.toLowerCase());
+        }
+
+        async function fetchMembers() {
+            try {
+                const res = await fetch('/api/members');
+                memberData = await res.json();
+                renderMemberTable();
+            } catch (e) {
+                console.error('Failed to fetch members:', e);
+            }
+        }
+
+        function getActionBadge(action, type = 'MEMBER') {
+            if (type === 'DONATION' && (action === 'CREATED' || action === 'UPDATED')) {
+                return '<span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-cyan-500/15 text-cyan-400 border border-cyan-500/20">DONATION</span>';
+            }
+            const badges = {
+                'UPDATED': '<span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-500/15 text-amber-400">UPDATED</span>',
+                'CREATED': '<span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/15 text-emerald-400">CREATED</span>',
+                'NO_CHANGE': '<span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-500/15 text-slate-400">NO CHANGE</span>',
+                'ERROR': '<span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-red-500/15 text-red-400">ERROR</span>',
+            };
+            return badges[action] || `<span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-500/15 text-slate-400">${action}</span>`;
+        }
+
+
+        function renderMemberTable(filter = '') {
+            const tbody = document.getElementById('membersBody');
+            const countEl = document.getElementById('memberCount');
+            const entries = Object.entries(memberData).map(([id, m]) => {
+                // Find associated donations from donationData (linked by pco_id)
+                const memberDonations = Object.values(donationData || {}).filter(d => d.pco_id === id);
+                const donationEvents = memberDonations.flatMap(d => (d.events || []).map(e => ({
+                    ...e,
+                    type: 'DONATION',
+                    detail: e.detail || 'Donation sync'
+                })));
+
+                const allEvents = [...(m.events || []), ...donationEvents];
+                // Sort by date - assuming ISO format strings
+                allEvents.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+                // Name parts extraction
+                const cleanName = m.name.replace(/\(.*\)/, '').trim();
+                const nameParts = cleanName.split(' ');
+                const firstName = nameParts[0] || '';
+                const lastName = nameParts.length > 1 ? nameParts[nameParts.length - 1] : '';
+
+                return {
+                    id,
+                    name: m.name,
+                    firstName,
+                    lastName,
+                    events: allEvents,
+                    lastEvent: allEvents.length > 0 ? allEvents[allEvents.length - 1] : null
+                };
+            });
+
+            const filtered = filter
+                ? entries.filter(e => e.name.toLowerCase().includes(filter) || e.id.includes(filter))
+                : entries;
+
+            filtered.sort((a, b) => {
+                let valA, valB;
+                if (memberSortField === 'firstName') {
+                    valA = a.firstName.toLowerCase();
+                    valB = b.firstName.toLowerCase();
+                } else if (memberSortField === 'lastName') {
+                    valA = a.lastName.toLowerCase();
+                    valB = b.lastName.toLowerCase();
+                } else if (memberSortField === 'pcId') {
+                    valA = a.id;
+                    valB = b.id;
+                } else if (memberSortField === 'action') {
+                    valA = (a.lastEvent ? a.lastEvent.action : '').toLowerCase();
+                    valB = (b.lastEvent ? b.lastEvent.action : '').toLowerCase();
+                } else if (memberSortField === 'date') {
+                    valA = a.lastEvent ? new Date(a.lastEvent.date).getTime() : 0;
+                    valB = b.lastEvent ? new Date(b.lastEvent.date).getTime() : 0;
+                }
+
+                if (valA < valB) return -1 * memberSortOrder;
+                if (valA > valB) return 1 * memberSortOrder;
+                return 0;
+            });
+
+            countEl.innerHTML = `Total: <span class="bg-indigo-500/10 text-indigo-400 px-2 py-0.5 rounded-lg border border-indigo-500/20 font-bold ml-1">${filtered.length}</span> members`;
+
+            if (!filtered.length) {
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center py-8 text-slate-500">No members found</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = filtered.map((m, idx) => `
+                <tr class="hover:bg-slate-800/40 cursor-pointer transition-colors" onclick="openMemberModal('${m.id}')">
+                    <td class="px-4 py-2.5 text-center text-slate-600 font-mono text-[10px]">${idx + 1}</td>
+                    <td class="px-4 py-2.5 font-medium text-slate-200">${m.firstName}</td>
+                    <td class="px-4 py-2.5 font-medium text-slate-400">${m.lastName}</td>
+                    <td class="px-4 py-2.5 text-slate-500 font-mono text-xs">${m.id}</td>
+                    <td class="px-4 py-2.5 text-center">${m.lastEvent ? getActionBadge(m.lastEvent.action, m.lastEvent.type) : '-'}</td>
+                    <td class="px-4 py-2.5 text-right text-slate-400 text-xs font-mono">${m.lastEvent ? formatDate(m.lastEvent.date).replace(/^[A-Z][a-z]{2}\s/, '').replace(/:\d{2}\s/, ' ') : '-'}</td>
+                </tr>
+            `).join('');
+
+            // Update sort icons
+            document.querySelectorAll('[id^="sort-"]').forEach(icon => {
+                icon.classList.add('opacity-0');
+                icon.classList.remove('opacity-100', 'rotate-180');
+            });
+            const activeIcon = document.getElementById(`sort-${memberSortField}`);
+            if (activeIcon) {
+                activeIcon.classList.remove('opacity-0');
+                activeIcon.classList.add('opacity-100');
+                if (memberSortOrder === -1) activeIcon.classList.add('rotate-180');
+            }
+            lucide.createIcons();
+        }
+
+        async function openMemberModal(pcId) {
+            const m = memberData[pcId];
+            if (!m) return;
+            document.getElementById('modalMemberName').textContent = m.name;
+            document.getElementById('modalMemberID').textContent = `PC ID: ${pcId}`;
+            const timeline = document.getElementById('modalTimeline');
+
+            // Show loading state
+            timeline.innerHTML = '<p class="text-slate-500 text-sm py-4 animate-pulse">Loading unified history...</p>';
+            document.getElementById('memberModal').classList.remove('hidden');
+
+            try {
+                const resp = await fetch(`/api/member-history/${pcId}`);
+                const data = await resp.json();
+                const events = data.events || [];
+
+                if (!events.length) {
+                    timeline.innerHTML = '<p class="text-slate-500 text-sm py-4">No sync events recorded yet.</p>';
+                } else {
+                    timeline.innerHTML = `
+                        <div class="relative border-l-2 border-slate-700/50 ml-2 space-y-0">
+                            ${events.map(ev => `
+                                <div class="relative pl-6 pb-5">
+                                    <div class="absolute left-[-5px] top-1.5 w-2.5 h-2.5 rounded-full ${ev.action === 'UPDATED' ? 'bg-amber-400' :
+                            ev.action === 'CREATED' ? 'bg-emerald-400' :
+                                ev.action === 'ERROR' ? 'bg-red-400' : 'bg-slate-500'
+                        }"></div>
+                                    <div class="flex items-center gap-2 mb-1">
+                                        <span class="px-1.5 py-0.5 rounded text-[8px] uppercase font-bold tracking-wider ${ev.type === 'DONATION' ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/20' :
+                            'bg-slate-500/10 text-slate-400 border border-slate-500/20'
+                        }">
+                                            ${ev.type || 'SYNC'}
+                                        </span>
+                                        ${getActionBadge(ev.action)}
+                                        <span class="text-xs text-slate-500">${formatDate(ev.date)}</span>
+                                    </div>
+                                    ${ev.display_name ? `
+                                        <div class="text-[10px] font-medium text-indigo-400 mt-1.5 flex items-center gap-1.5 bg-indigo-500/5 px-2 py-1 rounded w-fit border border-indigo-500/10">
+                                            <i data-lucide="user" class="w-2.5 h-2.5"></i>
+                                            Display Name: ${ev.display_name}
+                                        </div>
+                                    ` : ''}
+                                    ${ev.detail ? `<p class="text-xs text-slate-400 mt-1 leading-relaxed">${ev.detail}</p>` : ''}
+                                    ${ev.changes ? `
+                                        <div class="mt-2 space-y-1 border-l border-slate-700/50 pl-3">
+                                            ${ev.changes.map(c => `
+                                                <div class="text-[10px] flex flex-wrap items-center gap-1.5">
+                                                    <span class="text-slate-500 font-medium">${c.field}:</span>
+                                                    <span class="text-red-400/80 line-through decoration-red-500/30">${c.old || '(empty)'}</span>
+                                                    <i data-lucide="arrow-right" class="w-2.5 h-2.5 text-slate-600"></i>
+                                                    <span class="text-emerald-400 font-medium">${c.new || '(empty)'}</span>
+                                                </div>
+                                            `).join('')}
+                                        </div>
+                                    ` : ''}
+                                </div>
+                            `).join('')}
+                        </div>
+                    `;
+                }
+            } catch (err) {
+                console.error('Error fetching member history:', err);
+                timeline.innerHTML = '<p class="text-red-400 text-sm py-4">Error loading history. Please try again.</p>';
+            }
+
+            lucide.createIcons();
+        }
+
+        function closeMemberModal() {
+            document.getElementById('memberModal').classList.add('hidden');
+        }
+
+        document.getElementById('memberSearch').addEventListener('input', (e) => {
+            renderMemberTable(e.target.value.toLowerCase());
+        });
+
+        // ===== DONATION SYNC FUNCTIONS =====
+        let donationSettings = {};
+
+        async function fetchDonationStatus() {
+            try {
+                const resp = await fetch('/api/donation-sync-status');
+                if (resp.status === 401) {
+                    window.location.href = '/login';
+                    return;
+                }
+                const data = await resp.json();
+                const status = data.status || {};
+                const state = data.state || {};
+
+                // Status dot + text
+                const dot = document.getElementById('donStatusDot');
+                const text = document.getElementById('donStatusText');
+                const statusLabel = 'Donation Sync: ';
+
+                text.className = 'text-[11px] font-bold uppercase tracking-wider text-right transition-colors duration-500';
+                dot.className = 'w-1.5 h-1.5 rounded-full transition-all duration-500';
+
+                if (status.status === 'Running') {
+                    dot.classList.add('bg-blue-400', 'pulse-indicator');
+                    text.classList.add('text-blue-400');
+                    text.textContent = statusLabel + 'Running';
+                } else if (status.status === 'Success') {
+                    dot.classList.add('bg-green-400');
+                    text.classList.add('text-slate-500');
+                    text.textContent = statusLabel + 'Idle';
+                } else if (status.status === 'Failed') {
+                    dot.classList.add('bg-red-500');
+                    text.classList.add('text-red-400');
+                    text.textContent = statusLabel + 'Failed';
+                } else {
+                    dot.classList.add('bg-slate-600');
+                    text.classList.add('text-slate-500');
+                    text.textContent = statusLabel + 'Idle';
+                }
+
+                // Auto-reset Donation Sync Button if not running
+                const donBtn = document.getElementById('donationSyncBtn');
+                const donText = document.getElementById('donSyncText');
+                const donIcon = document.getElementById('donSyncIcon');
+                if (status.status !== 'Running' && donBtn && donText && donIcon) {
+                    donBtn.disabled = false;
+                    donText.textContent = 'Run Donation Sync';
+                    donIcon.setAttribute('data-lucide', 'play');
+                    donIcon.classList.remove('animate-spin');
+                    lucide.createIcons();
+                }
+
+                // Last sync info
+                document.getElementById('donStartTime').textContent = formatDate(state.start_time);
+
+                if (state.duration_seconds !== undefined && state.duration_seconds !== null) {
+                    const mins = Math.floor(state.duration_seconds / 60);
+                    const secs = state.duration_seconds % 60;
+                    document.getElementById('donDuration').textContent = mins > 0
+                        ? `${mins}m ${secs}s`
+                        : `${secs}s`;
+                } else {
+                    document.getElementById('donDuration').textContent = '--';
+                }
+
+                if (data.next_run) {
+                    document.getElementById('donNextSync').innerText = formatDate(data.next_run);
+                } else {
+                    document.getElementById('donNextSync').innerText = '--';
+                }
+
+                // Stats from last summary
+                const summary = state.last_summary || status.last_summary || status;
+                document.getElementById('donStatCreated').textContent = summary.donations_created ?? '-';
+                document.getElementById('donStatSkipped').textContent = summary.donations_skipped ?? '-';
+                document.getElementById('donStatErrors').textContent = summary.errors ?? '-';
+
+                // Logs
+                const logs = data.logs || [];
+                if (JSON.stringify(logs) !== JSON.stringify(donationLogsList || []) || isFirstLoadDonation) {
+                    isFirstLoadDonation = false;
+                    const currentList = donationLogsList || [];
+                    const isNewLogAtTop = currentList.length > 0 && logs[0] !== currentList[0];
+                    donationLogsList = logs;
+                    rebuildLogsUI(donationsLogsContainer, donationLogsList, activeDonationLog, 'donation');
+
+                    if (!activeDonationLog && logs && logs.length > 0) {
+                        toggleDonationLog(logs[0], false, true); // No scroll on first load
+                    } else if (isNewLogAtTop && status.status === 'Running') {
+                        toggleDonationLog(logs[0], true, true);
+                    }
+                }
+
+                // Periodically refresh the open log if a sync is active
+                if (status.status === 'Running' && activeDonationLog) {
+                    fetchLog(activeDonationLog, true);
+                }
+            } catch (e) {
+                console.error('Error fetching donation status:', e);
+            }
+        }
+
+        async function loadHistory() {
+            await fetchMembers();
+        }
+
+        // ── Donation History Logic ─────────────────────────────────────────
+        let donationData = {};
+
+        async function fetchDonations() {
+            try {
+                const res = await fetch('/api/donations');
+                donationData = await res.json();
+                renderMemberTable(); // Refresh member table to include new donation actions
+            } catch (e) {
+                console.error('Failed to fetch donations:', e);
+            }
+        }
+
+
+        function openDonationModal(txnId) {
+            const data = donationData[txnId];
+            if (!data) return;
+
+            document.getElementById('modalMemberName').innerText = data.donor_name;
+            document.getElementById('modalMemberID').innerText = `QB Transaction ID: ${txnId}`;
+
+            // Re-using the member modal for now, but without the timeline.
+            // The timeline is specific to member history.
+            document.getElementById('modalTimeline').innerHTML = '<p class="text-slate-500 text-sm py-4">No detailed transaction history available here.</p>';
+
+            document.getElementById('memberModal').classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+            lucide.createIcons();
+        }
+
+        async function triggerDonationSync() {
+            const btn = document.getElementById('donationSyncBtn');
+            const icon = document.getElementById('donSyncIcon');
+            const text = document.getElementById('donSyncText');
+            btn.disabled = true;
+            text.textContent = 'Starting...';
+
+            try {
+                const resp = await fetch('/api/donation-sync-now', { method: 'POST' });
+                const data = await resp.json();
+                if (resp.ok) {
+                    text.textContent = 'Sync Running...';
+
+                    // Auto-expand the new log
+                    if (data.log_file) {
+                        // Wait a bit for the list to be populated via the polling
+                        setTimeout(() => {
+                            fetchDonationStatus(); // Force a status refresh
+                            setTimeout(() => toggleDonationLog(data.log_file, true, true), 500);
+                        }, 500);
+                    }
+                } else {
+                    const errorMsg = data.error || 'Failed';
+                    text.textContent = `Error: ${errorMsg}`;
+                    setTimeout(() => {
+                        btn.disabled = false;
+                        text.textContent = 'Run Donation Sync';
+                    }, 3000);
+                }
+            } catch (e) {
+                text.textContent = 'Error - Retry';
+                btn.disabled = false;
+            }
+        }
+
+        let qbItems = [];
+
+        async function loadDonationSettings() {
+            try {
+                // Fetch QB Items and PCO Funds first
+                const [settingsRes, qbRes, pcoRes] = await Promise.all([
+                    fetch('/api/donation-sync-settings'),
+                    fetch('/api/qb-items'),
+                    fetch('/api/pco-funds')
+                ]);
+
+                const settings = await settingsRes.json();
+                qbItems = await qbRes.json();
+                pcoFunds = await pcoRes.json();
+
+                // Populate Default Fund Dropdown
+                const donDefaultFund = document.getElementById('donDefaultFund');
+                donDefaultFund.innerHTML = (Array.isArray(pcoFunds) ? pcoFunds : []).map(f =>
+                    `<option value="${f.name}" ${f.name === settings.default_fund_name ? 'selected' : ''}>${f.name}</option>`
+                ).join('');
+
+                // Populate basic settings
+                document.getElementById('donTxnType').value = settings.transaction_type || 'SalesReceipt';
+                document.getElementById('donLookback').value = settings.lookback_days || 30;
+                document.getElementById('donConfirmEmail').value = settings.confirmation_email || '';
+                document.getElementById('donAutoMap').checked = settings.auto_map_funds || false;
+                
+                if (settings.sync_frequency && typeof setupDonCronUI === 'function') {
+                     setupDonCronUI(settings.sync_frequency);
+                }
+
+                if (settings.next_run) {
+                    document.getElementById('donNextSync').innerText = formatDate(settings.next_run);
+                } else {
+                    document.getElementById('donNextSync').innerText = '--';
+                }
+
+                // Clear and populate mapping
+                const container = document.getElementById('fundMappingContainer');
+                container.innerHTML = '';
+                
+                const mapping = settings.product_service_map || settings.fund_mapping || {};
+                Object.entries(mapping).forEach(([qbName, pcoName]) => {
+                    addFundMappingRow(qbName, pcoName);
+                });
+
+                if (Object.keys(mapping).length === 0) {
+                    addFundMapping(); // Add one empty row by default if nothing exists
+                }
+
+                lucide.createIcons();
+            } catch (e) {
+                console.error('Error loading donation settings:', e);
+                if (typeof showToast === 'function') {
+                    showToast('Failed to load session/entity data from QuickBooks. Ensure QB is connected.', 'error');
+                }
+            }
+        }
+
+        function addFundMapping(qbName = '', pcoName = '') {
+            addFundMappingRow(qbName, pcoName);
+            lucide.createIcons();
+        }
+
+        function addFundMappingRow(qbName, pcoName) {
+            const container = document.getElementById('fundMappingContainer');
+            const row = document.createElement('div');
+            row.className = 'grid grid-cols-[1fr,24px,1fr,40px] items-center gap-3 animate-in fade-in slide-in-from-left-2 duration-200';
+
+            const qbOptions = Array.isArray(qbItems) ? qbItems.map(itm =>
+                `<option value="${itm.name}" ${itm.name === qbName ? 'selected' : ''}>${itm.name}</option>`
+            ).join('') : `<option value="">(No Items Found)</option>`;
+
+            const pcoOptions = Array.isArray(pcoFunds) ? pcoFunds.map(f =>
+                `<option value="${f.name}" ${f.name === pcoName ? 'selected' : ''}>${f.name}</option>`
+            ).join('') : `<option value="">(Error)</option>`;
+
+            row.innerHTML = `
+                <select class="fund-qb w-full bg-slate-900/50 border border-slate-700/50 rounded-xl px-3 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-indigo-500 transition-all">
+                    <option value="" disabled ${!qbName ? 'selected' : ''}>Select QB Item...</option>
+                    ${qbOptions}
+                </select>
+                <div class="flex justify-center">
+                    <i data-lucide="arrow-right" class="w-4 h-4 text-slate-600"></i>
+                </div>
+                <select class="fund-pco w-full bg-slate-900/50 border border-slate-700/50 rounded-xl px-3 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-indigo-500 transition-all">
+                    <option value="" disabled ${!pcoName ? 'selected' : ''}>Select PCO Fund...</option>
+                    ${pcoOptions}
+                </select>
+                <button onclick="this.parentElement.remove()" class="p-2.5 rounded-xl bg-slate-800/50 hover:bg-rose-900/20 text-slate-500 hover:text-rose-400 transition-all border border-transparent hover:border-rose-500/20">
+                    <i data-lucide="trash-2" class="w-4 h-4"></i>
+                </button>
+            `;
+            container.appendChild(row);
+        }
+
+        async function saveDonationSettings() {
+            const btn = document.getElementById('saveDonSettingsBtn');
+            const origHTML = btn.innerHTML;
+            btn.innerHTML = '<i data-lucide="loader" class="w-4 h-4 animate-spin"></i> Saving...';
+            btn.disabled = true;
+
+            // Collect fund mapping
+            const fundMapping = {};
+            document.querySelectorAll('#fundMappingContainer > div').forEach(row => {
+                const qbSelect = row.querySelector('.fund-qb');
+                const pcoSelect = row.querySelector('.fund-pco');
+                if (qbSelect && pcoSelect) {
+                    const qb = qbSelect.value.trim();
+                    const pco = pcoSelect.value.trim();
+                    if (qb && pco) fundMapping[qb] = pco;
+                }
+            });
+
+            const settings = {
+                transaction_type: document.getElementById('donTxnType').value,
+                default_fund_name: document.getElementById('donDefaultFund').value.trim(),
+                lookback_days: parseInt(document.getElementById('donLookback').value) || 30,
+                sync_frequency: buildDonCronFromUI(),
+                confirmation_email: document.getElementById('donConfirmEmail').value.trim(),
+                auto_map_funds: document.getElementById('donAutoMap').checked,
+                product_service_map: fundMapping
+            };
+
+            try {
+                const resp = await fetch('/api/donation-sync-settings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(settings)
+                });
+                if (resp.ok) {
+                    btn.innerHTML = '<i data-lucide="check" class="w-4 h-4"></i> Saved!';
+                    setTimeout(() => { btn.innerHTML = origHTML; btn.disabled = false; lucide.createIcons(); }, 1500);
+                } else {
+                    const errData = await resp.json().catch(() => ({}));
+                    btn.innerHTML = `<i data-lucide="x" class="w-4 h-4"></i> ${errData.error || 'Save Failed'}`;
+                    setTimeout(() => { btn.innerHTML = origHTML; btn.disabled = false; lucide.createIcons(); }, 3500);
+                }
+            } catch (e) {
+                btn.innerHTML = '<i data-lucide="x" class="w-4 h-4"></i> Error';
+                setTimeout(() => { btn.innerHTML = origHTML; btn.disabled = false; lucide.createIcons(); }, 3500);
+            }
+            lucide.createIcons();
+        }
+
+        // Initialize and setup polling
+        lucide.createIcons();
+        fetchStatus();
+        fetchMembers();
+        fetchDonations();
+        loadDonationSettings();
+
+        setInterval(() => {
+            fetchStatus();
+            fetchDonationStatus();
+        }, 3000);
+
+        // Refresh persistent history every 30 seconds
+        setInterval(() => {
+            fetchMembers();
+            fetchDonations();
+        }, 30000);
+
+        async function clearLogs(type) {
+            if (!confirm(`Are you sure you want to clear all ${type} sync logs? This action cannot be undone.`)) return;
+
+            try {
+                const resp = await fetch('/api/logs/clear', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ type })
+                });
+                const result = await resp.json();
+                if (resp.ok) {
+                    if (type === 'member') {
+                        fetchStatus(); // Refetch to update member log list
+                        activeLog = null;
+                        document.getElementById('logsContainer').innerHTML = '<div class="text-center p-8 text-slate-400">Logs cleared.</div>';
+                    } else {
+                        fetchDonationStatus(); // Refetch to update donation log list
+                        activeDonationLog = null;
+                        document.getElementById('donationsLogsContainer').innerHTML = '<div class="text-center p-8 text-slate-400">Logs cleared.</div>';
+                    }
+                } else {
+                    showToast(result.error || `Failed to clear logs`, 'error');
+                }
+            } catch (err) {
+                showToast(`Network error clearing logs`, 'error');
+            }
+        }
+
+        async function confirmClearHistory(type) {
+            const warning = type === 'donation'
+                ? "\n\nCRITICAL WARNING: This will reset the record of already-synced transactions. The NEXT SYNC will attempt to re-sync everything!"
+                : "";
+            if (!confirm(`Are you sure you want to clear the persistent sync history for ${type}s? This action cannot be undone.${warning}`)) return;
+
+            try {
+                const resp = await fetch('/api/sync/clear-history', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ type })
+                });
+                const result = await resp.json();
+                if (resp.ok) {
+                    showToast(`${type.charAt(0).toUpperCase() + type.slice(1)} sync history cleared successfully`, 'success');
+                    if (type === 'member') {
+                        fetchMembers(); // Refresh member table
+                        fetchStatus(); // Refresh summary stats
+                    } else {
+                        fetchDonations(); // Refresh donation table
+                        fetchDonationStatus(); // Refresh status and synced count
+                    }
+                } else {
+                    showToast(result.error || `Failed to clear history`, 'error');
+                }
+            } catch (err) {
+                showToast(`Network error clearing history`, 'error');
+            }
+        }
+
+        let localLoginEnabled = true;
+
+        function openRefreshTokenHelp() {
+            document.getElementById('refreshTokenHelpModal').classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeRefreshTokenHelp() {
+            document.getElementById('refreshTokenHelpModal').classList.add('hidden');
+            document.body.style.overflow = '';
+        }
+
+        async function loadLocalAdminSettings() {
+            try {
+                const resp = await fetch('/api/auth/local-settings');
+                const data = await resp.json();
+                localLoginEnabled = data.enabled;
+                updateLocalToggleUI();
+                
+                // Clear password fields on load
+                const newPassInput = document.getElementById('settingsNewLocalPassword');
+                const confirmPassInput = document.getElementById('settingsConfirmLocalPassword');
+                if (newPassInput) newPassInput.value = '';
+                if (confirmPassInput) confirmPassInput.value = '';
+
+                // Also load login history if the card is open
+                if (!document.getElementById('card-login-history').classList.contains('hidden')) {
+                    loadAdminLogins();
+                }
+            } catch (err) {
+                console.error('Failed to load local admin settings:', err);
+            }
+        }
+
+        async function loadAdminLogins() {
+            const tbody = document.getElementById('adminLoginTableBody');
+            try {
+                const resp = await fetch('/api/admin-logins');
+                const logs = await resp.json();
+                console.log('Admin Logins Response:', logs);
+                
+                if (!Array.isArray(logs)) {
+                    console.warn('Admin logins fetched but not an array:', logs);
+                    throw new Error(logs.error || 'Invalid log data received');
+                }
+
+                if (!logs.length) {
+                    tbody.innerHTML = '<tr><td colspan="4" class="px-2 py-4 text-center text-slate-500 text-xs italic">No login history found</td></tr>';
+                    return;
+                }
+
+                console.log('Starting render of', logs.length, 'logs');
+                tbody.innerHTML = logs.map(log => {
+                    console.log('Mapping log:', log.username);
+                    return `
+                    <tr class="hover:bg-white/5 transition-colors">
+                        <td class="px-2 py-3">
+                            <div class="text-xs font-medium text-slate-200">${log.username}</div>
+                        </td>
+                        <td class="px-2 py-3">
+                            <div class="text-[10px] text-slate-400 font-mono">${formatDate(log.timestamp)}</div>
+                        </td>
+                        <td class="px-2 py-3">
+                            <div class="text-[10px] text-slate-400 font-mono">${log.ip}</div>
+                        </td>
+                        <td class="px-2 py-3 text-right">
+                            <span class="px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider ${log.is_sso ? 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20' : 'bg-slate-500/10 text-slate-400 border border-slate-500/20'}">
+                                ${log.is_sso ? 'SSO' : 'Local'}
+                            </span>
+                        </td>
+                    </tr>
+                `}).join('');
+                console.log('HTML set successfully');
+                lucide.createIcons();
+            } catch (err) {
+                console.error('Failed to load admin logins:', err);
+                tbody.innerHTML = '<tr><td colspan="4" class="px-2 py-4 text-center text-rose-400 text-xs">Error loading logs</td></tr>';
+            }
+        }
+
+        function updateLocalToggleUI() {
+            const btn = document.getElementById('settingsLocalLoginToggle');
+            const dot = document.getElementById('settingsLocalLoginToggleDot');
+            if (localLoginEnabled) {
+                btn.classList.replace('bg-slate-700', 'bg-emerald-500');
+                dot.classList.replace('translate-x-1', 'translate-x-6');
+            } else {
+                btn.classList.replace('bg-emerald-500', 'bg-slate-700');
+                dot.classList.replace('translate-x-6', 'translate-x-1');
+            }
+        }
+
+        function toggleLocalLogin() {
+            localLoginEnabled = !localLoginEnabled;
+            updateLocalToggleUI();
+        }
+
+        async function saveLocalSettings() {
+            const newPass = document.getElementById('settingsNewLocalPassword').value;
+            const confirmPass = document.getElementById('settingsConfirmLocalPassword').value;
+
+            if (newPass && newPass !== confirmPass) {
+                showToast('Passwords do not match!', 'error');
+                return;
+            }
+
+            const btn = document.getElementById('saveAdminSettingsBtn');
+            const origHTML = btn.innerHTML;
+            btn.innerHTML = '<i data-lucide="loader" class="w-4 h-4 animate-spin"></i> Saving...';
+            btn.disabled = true;
+
+            try {
+                const resp = await fetch('/api/auth/local-settings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        enabled: localLoginEnabled,
+                        new_password: newPass || null
+                    })
+                });
+
+                if (resp.ok) {
+                    showToast('Admin settings updated successfully', 'success');
+                    // Clear password fields
+                    document.getElementById('settingsNewLocalPassword').value = '';
+                    document.getElementById('settingsConfirmLocalPassword').value = '';
+                } else {
+                    const data = await resp.json();
+                    showToast(data.error || 'Failed to update settings', 'error');
+                }
+            } catch (err) {
+                showToast('Network error updating settings', 'error');
+            } finally {
+                btn.innerHTML = origHTML;
+                btn.disabled = false;
+                lucide.createIcons();
+            }
+        }
+
+        // ── QuickBooks Credentials Logic ──────────────────────────────────
+        async function loadQBCredentials() {
+            try {
+                const res = await fetch('/api/qb-credentials');
+                const data = await res.json();
+                document.getElementById('qbClientId').value = data.QB_CLIENT_ID || '';
+                document.getElementById('qbClientSecret').value = data.QB_CLIENT_SECRET || '';
+                document.getElementById('qbRefreshToken').value = data.QB_REFRESH_TOKEN || '';
+                document.getElementById('qbRealmId').value = data.QB_REALM_ID || '';
+                document.getElementById('qbEnv').value = data.QB_ENVIRONMENT || 'sandbox';
+            } catch (err) {
+                console.error('Failed to load QB credentials:', err);
+                if (typeof showToast === 'function') showToast('Failed to load credentials', 'error');
+                else alert('Failed to load credentials');
+            }
+        }
+
+        async function saveQBCredentials() {
+            const btn = document.getElementById('saveQBCredsBtn');
+            const feedback = document.getElementById('qbSavedFeedback');
+            const origHTML = btn.innerHTML;
+
+            btn.disabled = true;
+            btn.innerHTML = '<i data-lucide="loader" class="w-4 h-4 animate-spin"></i> Saving...';
+            lucide.createIcons();
+
+            const payload = {
+                QB_CLIENT_ID: document.getElementById('qbClientId').value.trim(),
+                QB_REALM_ID: document.getElementById('qbRealmId').value.trim(),
+                QB_ENVIRONMENT: document.getElementById('qbEnv').value
+            };
+
+            // Only send secret/token if they aren't the masked literals
+            const secret = document.getElementById('qbClientSecret').value;
+            if (secret && secret !== '********') payload.QB_CLIENT_SECRET = secret.trim();
+
+            const token = document.getElementById('qbRefreshToken').value;
+            if (token && token !== '********') payload.QB_REFRESH_TOKEN = token.trim();
+
+            try {
+                const res = await fetch('/api/qb-credentials', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (res.ok) {
+                    feedback.classList.remove('hidden');
+                    setTimeout(() => feedback.classList.add('hidden'), 3000);
+                    if (typeof showToast === 'function') showToast('Credentials updated successfully', 'success');
+                    // Reload to show masked values
+                    await loadQBCredentials();
+                } else {
+                    const errData = await res.json();
+                    if (typeof showToast === 'function') showToast(errData.error || 'Failed to save credentials', 'error');
+                    else alert(errData.error || 'Failed to save credentials');
+                }
+            } catch (err) {
+                if (typeof showToast === 'function') showToast('Network error while saving credentials', 'error');
+                else alert('Network error while saving credentials');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = origHTML;
+                lucide.createIcons();
+            }
+        }
+
+        function togglePassword(id) {
+            const input = document.getElementById(id);
+            const btn = input.nextElementSibling;
+            if (input.type === 'password') {
+                input.type = 'text';
+                btn.innerHTML = '<i data-lucide="eye-off" class="w-4 h-4"></i>';
+            } else {
+                input.type = 'password';
+                btn.innerHTML = '<i data-lucide="eye" class="w-4 h-4"></i>';
+            }
+            lucide.createIcons();
+        }
+
+        // Global Toast Notification System
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toastContainer');
+            if (!container) return;
+
+            const toast = document.createElement('div');
+            toast.className = `toast border-l-4 ${type === 'success' ? 'border-emerald-500' : 'border-rose-500'}`;
+            
+            const iconName = type === 'success' ? 'check-circle' : 'alert-circle';
+            const iconColor = type === 'success' ? 'text-emerald-400' : 'text-rose-400';
+            
+            toast.innerHTML = `
+                <i data-lucide="${iconName}" class="w-5 h-5 ${iconColor} shrink-0"></i>
+                <div class="flex-1">
+                    <p class="text-sm font-medium text-slate-200">${message}</p>
+                </div>
+                <button onclick="this.parentElement.classList.add('toast-out'); setTimeout(() => this.parentElement.remove(), 300)" class="text-slate-500 hover:text-slate-300">
+                    <i data-lucide="x" class="w-4 h-4"></i>
+                </button>
+            `;
+            
+            container.appendChild(toast);
+            lucide.createIcons();
+
+            setTimeout(() => {
+                toast.classList.add('toast-out');
+                setTimeout(() => toast.remove(), 300);
+            }, 5000);
+        }
+
+        // --- Environment Configuration Dashboard ---
+
+        function toggleCard(id) {
+            const content = document.getElementById(id);
+            const icon = document.getElementById('icon-' + id);
+            content.classList.toggle('expanded');
+            icon.classList.toggle('expanded');
+        }
+
+        let currentConfig = {};
+
+        async function loadEnvironmentConfig() {
+            try {
+                const res = await fetch('/api/config');
+                const data = await res.json();
+                currentConfig = data;
+
+                Object.keys(data).forEach(section => {
+                    const container = document.getElementById('env-' + section);
+                    if (!container) return;
+                    
+                    container.innerHTML = '';
+                    const sectionData = data[section];
+                    
+                    Object.keys(sectionData).sort().forEach(key => {
+                        const field = sectionData[key];
+                        const val = (typeof field === 'object' && field !== null) ? field.value : field;
+                        const hint = (typeof field === 'object' && field !== null) ? field.hint : '';
+                        const isSensitive = val.includes('...') || val === '********';
+                        
+                        const div = document.createElement('div');
+                        div.className = 'space-y-1.5';
+                        div.innerHTML = `
+                            <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">${key.replace(/_/g, ' ')}</label>
+                            <div class="relative">
+                                <input type="${isSensitive ? 'password' : 'text'}" 
+                                       id="input-${key}" 
+                                       value="${val}"
+                                       class="w-full bg-slate-900/50 border border-slate-700/50 rounded-xl px-4 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-indigo-500 transition-colors ${isSensitive ? 'pr-10' : ''}"
+                                       placeholder="Enter ${key}">
+                                ${isSensitive ? `
+                                    <button onclick="togglePassword('input-${key}')" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300">
+                                        <i data-lucide="eye" class="w-4 h-4"></i>
+                                    </button>
+                                ` : ''}
+                            </div>
+                            ${hint ? `<p class="text-[10px] text-slate-500 leading-tight px-1">${hint}</p>` : ''}
+                        `;
+                        container.appendChild(div);
+                    });
+                });
+                lucide.createIcons();
+            } catch (err) {
+                console.error('Failed to load config:', err);
+                showToast('Failed to load system configuration.', 'error');
+            }
+        }
+
+        async function saveEnvSection(section) {
+            const container = document.getElementById('env-' + section);
+            const inputs = container.querySelectorAll('input');
+            const updates = {};
+            
+            inputs.forEach(input => {
+                const key = input.id.replace('input-', '');
+                updates[key] = input.value;
+            });
+
+            try {
+                const res = await fetch('/api/config', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(updates)
+                });
+                const result = await res.json();
+                
+                if (result.success) {
+                    showToast(`${section.toUpperCase()} settings saved successfully.`);
+                    if (result.message) console.log(result.message);
+                } else {
+                    showToast(result.error || 'Failed to save settings.', 'error');
+                }
+            } catch (err) {
+                console.error('Save error:', err);
+                showToast('An error occurred while saving.', 'error');
+            }
+        }
+    </script>
+    <div id="toastContainer" class="toast-container"></div>
+    <!-- Refresh Token Help Modal -->
+    <div id="refreshTokenHelpModal"
+        class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+        <div class="glass-card w-full max-w-lg rounded-3xl overflow-hidden animate-in fade-in zoom-in duration-300">
+            <div class="p-6 border-b border-slate-800/50 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-indigo-500/10 rounded-xl flex items-center justify-center border border-indigo-500/20">
+                        <i data-lucide="help-circle" class="w-5 h-5 text-indigo-400"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-lg font-bold text-slate-100">Refresh Token Guide</h2>
+                        <p class="text-xs text-slate-500 font-medium">How to generate a new authentication token</p>
+                    </div>
+                </div>
+                <button onclick="closeRefreshTokenHelp()"
+                    class="p-2 rounded-xl hover:bg-slate-800 text-slate-500 transition-colors">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <div class="p-8 space-y-6">
+                <ol class="text-sm text-slate-400 space-y-4 list-decimal pl-5 leading-relaxed">
+                    <li>Log in to the <a href="https://developer.intuit.com/app/developer/playground"
+                            target="_blank" class="text-indigo-400 hover:underline font-semibold">Intuit OAuth
+                            Playground</a>.</li>
+                    <li>Select your app from the dropdown and check the <code
+                            class="bg-slate-800 px-1.5 py-0.5 rounded text-indigo-300 border border-indigo-500/20">com.intuit.quickbooks.accounting</code>
+                        scope.</li>
+                    <li>Click <strong class="text-slate-200">Get Authorization Code</strong> and log in to authorize access to your company.</li>
+                    <li>Click <strong class="text-slate-200">Get Tokens</strong> to generate a fresh <strong class="text-indigo-400">Refresh Token</strong>.</li>
+                    <li>Copy the refresh token and paste it into the form on the settings page.</li>
+                </ol>
+                
+                <div class="p-4 rounded-2xl bg-indigo-500/5 border border-indigo-500/10 flex gap-3">
+                    <i data-lucide="zap" class="w-5 h-5 text-indigo-400 shrink-0"></i>
+                    <p class="text-xs text-slate-500 leading-relaxed text-balance">
+                        <strong class="text-indigo-400">Pro Tip:</strong> Once established, the server will rotate these tokens automatically. You only need to do this manually if the connection expires or is revoked.
+                    </p>
+                </div>
+            </div>
+            <div class="p-6 bg-slate-900/30 border-t border-slate-800/50 text-right">
+                <button onclick="closeRefreshTokenHelp()"
+                    class="px-8 py-3 rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-300 font-semibold text-sm transition-all active:scale-95">
+                    Got it
+                </button>
+            </div>
+        </div>
+    </div>
+
+
+{% endblock %}
