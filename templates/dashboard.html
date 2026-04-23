@@ -1235,13 +1235,7 @@
             if (!silent && loader) loader.classList.remove('hidden');
 
             try {
-                const authQuery = window.location.search;
-                let url = `/api/logs/${encodeURIComponent(filename)}${authQuery}`;
-                if (!window.location.pathname.includes('/api/dashboard')) {
-                    let basePath = window.location.pathname.replace('/dashboard', '');
-                    if (basePath === '/') basePath = '';
-                    url = `${basePath}/api/logs/${encodeURIComponent(filename)}${authQuery}`;
-                }
+                const url = `/pco-qb/api/logs/${encodeURIComponent(filename)}`;
 
                 const res = await fetch(url);
                 if (res.ok) {
@@ -1268,10 +1262,7 @@
 
         const fetchStatus = async () => {
             try {
-                const url = window.location.pathname.includes('/api/dashboard')
-                    ? '/api/status' + window.location.search : '/api/status';
-
-                const res = await fetch(url);
+                const res = await fetch('/pco-qb/api/status');
                 if (res.status === 401) {
                     window.location.href = '/login';
                     return;
@@ -1393,8 +1384,7 @@
             lucide.createIcons();
 
             try {
-                const url = `/api/sync-now${window.location.search}`;
-                const res = await fetch(url, { method: 'POST' });
+                const res = await fetch('/pco-qb/api/sync-now', { method: 'POST' });
                 if (res.ok) setTimeout(fetchStatus, 500);
             } finally {
                 setTimeout(() => {
@@ -1788,7 +1778,7 @@
             document.getElementById('memberModal').classList.remove('hidden');
 
             try {
-                const resp = await fetch(`/api/member-history/${pcId}`);
+                const resp = await fetch(`/pco-qb/api/member-history/${pcId}`);
                 const data = await resp.json();
                 const events = data.events || [];
 
@@ -1859,7 +1849,7 @@
             try {
                 const resp = await fetch('/pco-qb/api/donation-sync-status');
                 if (resp.status === 401) {
-                    window.location.href = '/login';
+                    window.location.href = '/pco-qb/login';
                     return;
                 }
                 const data = await resp.json();

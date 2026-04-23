@@ -158,6 +158,7 @@ def run_scheduled_sync():
         config = load_config(config_path)
         setup_logging(config)
         rotate_logs(keep=10)
+        from sync_pc_to_qb import SyncRoutine
         routine = SyncRoutine(config)
         routine.run()
     except Exception as e:
@@ -657,6 +658,7 @@ def api_sync_now():
         config = load_config()
         log_file = setup_logging(config, prefix="sync")
         rotate_logs(keep=10)
+        from sync_pc_to_qb import SyncRoutine
         routine = SyncRoutine(config)
         threading.Thread(target=routine.run, daemon=True).start()
         return jsonify({
@@ -1026,8 +1028,9 @@ def api_get_pco_funds():
             logging.error(f"PCO Credentials missing. APP_ID present: {bool(app_id)}, PAT present: {bool(pat)}")
             return jsonify({"error": "PCO_APP_ID or PCO_PAT missing in environment. Check Settings tab."}), 400
             
+        from sync_donations_qb_to_pc import PlanningCenterGivingClient
         client = PlanningCenterGivingClient()
-        funds_list = client.get_all_funds() 
+        funds_list = client.get_all_funds()
         return jsonify(funds_list)
     except Exception as e:
         logging.error(f"Failed to fetch PCO funds: {e}")
