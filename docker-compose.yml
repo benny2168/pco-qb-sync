@@ -3,8 +3,15 @@ version: "3.8"
 services:
   admin-portal:
     build: .
-    image: admin-portal:v1.4
+    image: admin-portal:v1.5
     container_name: admin-portal
+    environment:
+      - PCO_CONFIG_DIR
+      - PCO_DATA_DIR
+      - PCO_LOGS_DIR
+      - OIDC_CLIENT_ID
+      - OIDC_CLIENT_SECRET
+      - OIDC_DISCOVERY_URL
     restart: unless-stopped
     ports:
       - "7365:7365"
