@@ -3,7 +3,7 @@ version: "3.8"
 services:
   admin-portal:
     build: .
-    image: admin-portal:v1.3
+    image: admin-portal:v1.4
     container_name: admin-portal
     restart: unless-stopped
     ports:

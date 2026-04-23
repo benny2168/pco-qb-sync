@@ -120,3 +120,18 @@ def update_env_file_bulk(updates):
         return True
     return False
 
+from flask import request, jsonify
+from functools import wraps
+
+def verify_origin(f):
+    """Basic CSRF mitigation: verify request origin matches host."""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if request.method == 'POST':
+            origin = request.headers.get('Origin')
+            host = request.headers.get('Host')
+            if origin and host not in origin:
+                 logging.warning(f"CSRF Alert: Origin '{origin}' does not match Host '{host}'")
+                 return jsonify({"error": "Forbidden: CSRF protection triggered."}), 403
+        return f(*args, **kwargs)
+    return decorated_function
