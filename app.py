@@ -201,7 +201,7 @@ def dashboard_page():
             "id": "pco-qb",
             "name": "PCO ↔ QB Sync",
             "icon": "activity",
-            "url": url_for('pco_qb.dashboard'),
+            "url": url_for('pco_qb.dashboard_page'),
             "description": "Synchronize Planning Center Members & Donations with QuickBooks Online",
             "allowed": True # Or conditionally based on groups
         }
