@@ -22,6 +22,8 @@ def read_json_with_retries(path, retries=5, delay=0.1):
         try:
             with open(path, 'r', encoding='utf-8') as f:
                 return json.load(f)
+        except FileNotFoundError:
+            return None
         except OSError as e:
             if e.errno == 35 and i < retries - 1:
                 time.sleep(delay)
@@ -32,8 +34,6 @@ def read_json_with_retries(path, retries=5, delay=0.1):
                 time.sleep(delay)
                 continue
             raise
-        except FileNotFoundError:
-            return None
     return None
 
 def robust_save_file(path, content, is_json=True, retries=5, delay=0.1):
