@@ -109,11 +109,12 @@ if not scheduler.running:
 # Blueprint Registration
 # ---------------------------------------------------------------------------
 from modules.pco_qb_sync.routes import pco_qb_bp, register_scheduler_jobs
-from modules.b_a_reporting.routes import b_a_bp
+from modules.b_a_reporting.routes import b_a_bp, register_b_a_scheduler_jobs
 
 app.register_blueprint(pco_qb_bp, url_prefix='/pco-qb')
 app.register_blueprint(b_a_bp, url_prefix='/b-a-reports')
 register_scheduler_jobs(scheduler, BASE_DIR)
+register_b_a_scheduler_jobs(scheduler)
 
 # ---------------------------------------------------------------------------
 # Routes — Auth & Main

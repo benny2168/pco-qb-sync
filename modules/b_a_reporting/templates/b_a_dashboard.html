@@ -46,6 +46,15 @@
         </div>
         
         <p class="text-sm text-slate-400 mb-6">Enter the Planning Center List ID for each month's Birthdays and Anniversaries. You can find the List ID in the URL when viewing a list in Planning Center (e.g., <code>https://people.planningcenteronline.com/lists/<b>3463707</b></code>).</p>
+        
+        <div class="mb-6 flex items-center gap-4 bg-slate-800/50 p-4 rounded-xl border border-slate-700/50 w-max">
+            <div class="flex items-center gap-2">
+                <i data-lucide="clock" class="w-4 h-4 text-indigo-400"></i>
+                <label class="text-sm font-medium text-slate-300">Daily Sync Time:</label>
+            </div>
+            <input type="time" id="syncTime" value="{{ config.get('sync_time', '03:00') }}" class="bg-slate-900 border border-slate-700 text-slate-200 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block p-2">
+            <span class="text-xs text-slate-500">Data will automatically refresh at this time every day.</span>
+        </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="monthsGrid">
             {% set months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'] %}
@@ -126,11 +135,13 @@
             };
         }
         
+        const syncTime = document.getElementById('syncTime').value;
+        
         try {
             const res = await fetch('/b-a-reports/api/config', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ lists: lists })
+                body: JSON.stringify({ lists: lists, sync_time: syncTime })
             });
             if(res.ok) {
                 btn.innerHTML = '<i data-lucide="check" class="w-4 h-4"></i> Saved!';

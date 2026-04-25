@@ -34,6 +34,7 @@ def get_b_a_config():
     # Default configuration
     default_config = {
         "public_token": secrets.token_urlsafe(16),
+        "sync_time": "03:00",
         "lists": {
             # Format: "month_name": {"birthdays": "list_id", "anniversaries": "list_id"}
             str(m): {"birthdays": "", "anniversaries": ""} for m in range(1, 13)
@@ -193,27 +194,68 @@ def fetch_list_details(list_id, pc_client):
 
 import time
 def get_cached_list_details(list_id, pc_client):
-    """Fetch list details with a 24-hour file-based cache."""
+    """Fetch list details with a file-based cache. Does NOT block for live fetch to avoid timeouts."""
     if not list_id:
         return []
         
     cache_path = os.path.join(BASE_DIR, 'data', f'b_a_list_{list_id}.json')
     
-    # Check if cache exists and is fresh (< 24 hours old)
+    # Always return cache if it exists, even if old. Background jobs will keep it fresh.
     if os.path.exists(cache_path):
-        if time.time() - os.path.getmtime(cache_path) < 86400:
-            cached_data = read_json_with_retries(cache_path)
-            if cached_data is not None:
-                logging.info(f"Using cached data for list {list_id}")
-                return cached_data
-                
-    # Fetch live data
-    logging.info(f"Fetching live data for list {list_id}")
-    data = fetch_list_details(list_id, pc_client)
+        cached_data = read_json_with_retries(cache_path)
+        if cached_data is not None:
+            return cached_data
+            
+    # If no cache exists, return empty and let background job populate it
+    return []
+
+b_a_scheduler = None
+
+def refresh_b_a_cache_job():
+    """Background job to fetch and cache all configured lists."""
+    logging.info("Starting scheduled B&A cache refresh...")
+    config = get_b_a_config()
+    lists = config.get("lists", {})
+    pc_client = get_pc_client()
     
-    # Save to cache
-    robust_save_file(cache_path, data)
-    return data
+    # Gather all unique list IDs
+    list_ids = set()
+    for m in lists.values():
+        if m.get('birthdays'):
+            list_ids.add(m['birthdays'])
+        if m.get('anniversaries'):
+            list_ids.add(m['anniversaries'])
+            
+    for lid in list_ids:
+        try:
+            cache_path = os.path.join(BASE_DIR, 'data', f'b_a_list_{lid}.json')
+            data = fetch_list_details(lid, pc_client)
+            robust_save_file(cache_path, data)
+            logging.info(f"Successfully cached list {lid}")
+        except Exception as e:
+            logging.error(f"Failed to cache list {lid}: {e}")
+
+def register_b_a_scheduler_jobs(scheduler):
+    """Register cron jobs for B&A Reporting module."""
+    global b_a_scheduler
+    b_a_scheduler = scheduler
+    
+    config = get_b_a_config()
+    sync_time = config.get("sync_time", "03:00")
+    try:
+        hour, minute = sync_time.split(":")
+    except:
+        hour, minute = "3", "0"
+        
+    scheduler.add_job(
+        id='b_a_cache_sync',
+        func=refresh_b_a_cache_job,
+        trigger='cron',
+        hour=hour,
+        minute=minute,
+        replace_existing=True
+    )
+    logging.info(f"B&A cache scheduler configured for {sync_time}")
 
 def clear_b_a_cache():
     """Clear all cached list data."""
@@ -245,11 +287,35 @@ def api_config():
         data = request.json
         if 'lists' in data:
             config['lists'] = data['lists']
+            
+        if 'sync_time' in data:
+            config['sync_time'] = data['sync_time']
+            if b_a_scheduler:
+                try:
+                    hour, minute = config['sync_time'].split(":")
+                    b_a_scheduler.reschedule_job(
+                        job_id='b_a_cache_sync',
+                        trigger='cron',
+                        hour=hour,
+                        minute=minute
+                    )
+                    logging.info(f"Rescheduled B&A cache for {hour}:{minute}")
+                except Exception as e:
+                    logging.error(f"Failed to reschedule B&A job: {e}")
+                    
         if data.get('regenerate_token'):
             config['public_token'] = secrets.token_urlsafe(16)
             
         save_b_a_config(config)
-        clear_b_a_cache() # Clear cache so new lists are fetched immediately
+        
+        # Trigger background refresh immediately
+        if b_a_scheduler:
+            b_a_scheduler.add_job(
+                id=f'b_a_manual_sync_{int(time.time())}',
+                func=refresh_b_a_cache_job,
+                trigger='date'
+            )
+            
         return jsonify({"success": True, "config": config})
         
     return jsonify(config)
@@ -259,6 +325,13 @@ def api_config():
 @verify_origin
 def api_clear_cache():
     clear_b_a_cache()
+    # Trigger background refresh immediately
+    if b_a_scheduler:
+        b_a_scheduler.add_job(
+            id=f'b_a_manual_sync_{int(time.time())}',
+            func=refresh_b_a_cache_job,
+            trigger='date'
+        )
     return jsonify({"success": True})
 
 @b_a_bp.route('/api/report', methods=['GET'])
