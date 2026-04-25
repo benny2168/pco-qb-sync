@@ -3,7 +3,7 @@ version: "3.8"
 services:
   admin-portal:
     build: .
-    image: admin-portal:v2.2
+    image: admin-portal:v2.3
     container_name: admin-portal
     environment:
       - PCO_CONFIG_DIR
