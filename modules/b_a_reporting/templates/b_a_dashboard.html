@@ -1,0 +1,152 @@
+{% extends "base.html" %}
+
+{% block header_title %}
+<span class="gradient-text text-2xl sm:text-4xl font-bold">Birthday & Anniversary Reports</span>
+{% endblock %}
+
+{% block header_subtitle %}
+<i data-lucide="calendar" class="w-3.5 h-3.5 sm:w-4 sm:h-4"></i> Configuration & Management
+{% endblock %}
+
+{% block content %}
+<div class="mt-8 space-y-8">
+
+    <!-- Public Link Card -->
+    <div class="glass-card rounded-2xl p-6 md:p-8">
+        <h2 class="text-xl font-semibold text-slate-200 mb-4 flex items-center gap-2">
+            <i data-lucide="link" class="w-5 h-5 text-indigo-400"></i> Public URL
+        </h2>
+        <p class="text-sm text-slate-400 mb-4">This secure, obscure URL can be embedded in your member-locked app. It displays birthdays and anniversaries for Today, This Week, and This Month.</p>
+        
+        <div class="flex items-center gap-3">
+            <input type="text" readonly value="{{ public_url }}" id="publicUrl" class="w-full bg-slate-900/50 border border-slate-700/50 rounded-xl px-4 py-3 text-sm text-slate-300 font-mono">
+            <button onclick="copyPublicUrl()" class="px-4 py-3 bg-indigo-600/20 text-indigo-400 hover:bg-indigo-600/40 rounded-xl transition-all font-semibold text-sm flex items-center gap-2 border border-indigo-500/20">
+                <i data-lucide="copy" class="w-4 h-4"></i> Copy
+            </button>
+            <button onclick="regenerateToken()" class="px-4 py-3 bg-rose-600/20 text-rose-400 hover:bg-rose-600/40 rounded-xl transition-all font-semibold text-sm flex items-center gap-2 border border-rose-500/20">
+                <i data-lucide="refresh-cw" class="w-4 h-4"></i> Regenerate
+            </button>
+        </div>
+    </div>
+
+    <!-- Monthly Configuration Card -->
+    <div class="glass-card rounded-2xl p-6 md:p-8">
+        <div class="flex items-center justify-between mb-6">
+            <h2 class="text-xl font-semibold text-slate-200 flex items-center gap-2">
+                <i data-lucide="settings" class="w-5 h-5 text-indigo-400"></i> Monthly PCO List Mapping
+            </h2>
+            <button onclick="saveLists()" id="saveListsBtn" class="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium rounded-xl transition-all flex items-center gap-2 shadow-lg shadow-indigo-900/20 active:scale-95">
+                <i data-lucide="save" class="w-4 h-4"></i> Save Mappings
+            </button>
+        </div>
+        
+        <p class="text-sm text-slate-400 mb-6">Enter the Planning Center List ID for each month's Birthdays and Anniversaries. You can find the List ID in the URL when viewing a list in Planning Center (e.g., <code>https://people.planningcenteronline.com/lists/<b>3463707</b></code>).</p>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="monthsGrid">
+            {% set months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'] %}
+            {% for i in range(1, 13) %}
+            <div class="bg-slate-900/30 border border-slate-800/50 rounded-xl p-4">
+                <h3 class="font-bold text-slate-300 mb-4">{{ months[i-1] }}</h3>
+                <div class="space-y-3">
+                    <div>
+                        <label class="block text-[10px] uppercase font-bold text-slate-500 mb-1">Birthdays List ID</label>
+                        <input type="text" id="bday_{{ i }}" value="{{ config.lists[i|string].birthdays }}" placeholder="e.g. 3463707" class="w-full bg-slate-900/80 border border-slate-700/50 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-indigo-500 transition-colors">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] uppercase font-bold text-slate-500 mb-1">Anniversaries List ID</label>
+                        <input type="text" id="anniv_{{ i }}" value="{{ config.lists[i|string].anniversaries }}" placeholder="e.g. 3463710" class="w-full bg-slate-900/80 border border-slate-700/50 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-indigo-500 transition-colors">
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+</div>
+
+<script>
+    lucide.createIcons();
+
+    function copyPublicUrl() {
+        const urlInput = document.getElementById('publicUrl');
+        urlInput.select();
+        document.execCommand('copy');
+        
+        const btn = event.currentTarget;
+        const originalHtml = btn.innerHTML;
+        btn.innerHTML = '<i data-lucide="check" class="w-4 h-4"></i> Copied!';
+        lucide.createIcons();
+        btn.classList.replace('text-indigo-400', 'text-emerald-400');
+        btn.classList.replace('bg-indigo-600/20', 'bg-emerald-600/20');
+        btn.classList.replace('border-indigo-500/20', 'border-emerald-500/20');
+        
+        setTimeout(() => {
+            btn.innerHTML = originalHtml;
+            lucide.createIcons();
+            btn.classList.replace('text-emerald-400', 'text-indigo-400');
+            btn.classList.replace('bg-emerald-600/20', 'bg-indigo-600/20');
+            btn.classList.replace('border-emerald-500/20', 'border-indigo-500/20');
+        }, 2000);
+    }
+
+    async function regenerateToken() {
+        if(!confirm('Are you sure? This will invalidate the old URL everywhere it is used.')) return;
+        
+        try {
+            const res = await fetch('/b-a-reports/api/config', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ regenerate_token: true })
+            });
+            if(res.ok) {
+                window.location.reload();
+            } else {
+                alert('Failed to regenerate token.');
+            }
+        } catch(e) {
+            alert('Error connecting to server.');
+        }
+    }
+
+    async function saveLists() {
+        const btn = document.getElementById('saveListsBtn');
+        btn.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> Saving...';
+        lucide.createIcons();
+        
+        let lists = {};
+        for(let i=1; i<=12; i++) {
+            lists[i] = {
+                birthdays: document.getElementById('bday_'+i).value.trim(),
+                anniversaries: document.getElementById('anniv_'+i).value.trim()
+            };
+        }
+        
+        try {
+            const res = await fetch('/b-a-reports/api/config', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ lists: lists })
+            });
+            if(res.ok) {
+                btn.innerHTML = '<i data-lucide="check" class="w-4 h-4"></i> Saved!';
+                btn.classList.replace('bg-indigo-600', 'bg-emerald-600');
+                btn.classList.replace('hover:bg-indigo-500', 'hover:bg-emerald-500');
+            } else {
+                btn.innerHTML = '<i data-lucide="x" class="w-4 h-4"></i> Error';
+                btn.classList.replace('bg-indigo-600', 'bg-rose-600');
+            }
+        } catch(e) {
+            btn.innerHTML = '<i data-lucide="x" class="w-4 h-4"></i> Error';
+            btn.classList.replace('bg-indigo-600', 'bg-rose-600');
+        }
+        
+        lucide.createIcons();
+        setTimeout(() => {
+            btn.innerHTML = '<i data-lucide="save" class="w-4 h-4"></i> Save Mappings';
+            btn.classList.remove('bg-emerald-600', 'hover:bg-emerald-500', 'bg-rose-600');
+            btn.classList.add('bg-indigo-600', 'hover:bg-indigo-500');
+            lucide.createIcons();
+        }, 2000);
+    }
+</script>
+{% endblock %}

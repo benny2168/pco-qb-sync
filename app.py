@@ -109,8 +109,10 @@ if not scheduler.running:
 # Blueprint Registration
 # ---------------------------------------------------------------------------
 from modules.pco_qb_sync.routes import pco_qb_bp, register_scheduler_jobs
+from modules.b_a_reporting.routes import b_a_bp
 
 app.register_blueprint(pco_qb_bp, url_prefix='/pco-qb')
+app.register_blueprint(b_a_bp, url_prefix='/b-a-reports')
 register_scheduler_jobs(scheduler, BASE_DIR)
 
 # ---------------------------------------------------------------------------
@@ -210,8 +212,15 @@ def dashboard_page():
             "url": url_for('pco_qb.dashboard_page'),
             "description": "Synchronize Planning Center Members & Donations with QuickBooks Online",
             "allowed": True # Or conditionally based on groups
+        },
+        {
+            "id": "b-a-reports",
+            "name": "Birthday & Anniversary Reports",
+            "icon": "calendar",
+            "url": url_for('b_a_reports.dashboard'),
+            "description": "Generate and manage monthly birthday and anniversary lists from Planning Center",
+            "allowed": True
         }
-        # Add future modules here
     ]
     return render_template('portal_dashboard.html', user=session.get('user'), modules=modules)
 
