@@ -35,9 +35,14 @@
             <h2 class="text-xl font-semibold text-slate-200 flex items-center gap-2">
                 <i data-lucide="settings" class="w-5 h-5 text-indigo-400"></i> Monthly PCO List Mapping
             </h2>
-            <button onclick="saveLists()" id="saveListsBtn" class="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium rounded-xl transition-all flex items-center gap-2 shadow-lg shadow-indigo-900/20 active:scale-95">
-                <i data-lucide="save" class="w-4 h-4"></i> Save Mappings
-            </button>
+            <div class="flex items-center gap-3">
+                <button onclick="clearCache()" id="clearCacheBtn" class="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-medium rounded-xl transition-all flex items-center gap-2 border border-slate-700/50">
+                    <i data-lucide="refresh-cw" class="w-4 h-4"></i> Clear Cache
+                </button>
+                <button onclick="saveLists()" id="saveListsBtn" class="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium rounded-xl transition-all flex items-center gap-2 shadow-lg shadow-indigo-900/20 active:scale-95">
+                    <i data-lucide="save" class="w-4 h-4"></i> Save Mappings
+                </button>
+            </div>
         </div>
         
         <p class="text-sm text-slate-400 mb-6">Enter the Planning Center List ID for each month's Birthdays and Anniversaries. You can find the List ID in the URL when viewing a list in Planning Center (e.g., <code>https://people.planningcenteronline.com/lists/<b>3463707</b></code>).</p>
@@ -145,6 +150,33 @@
             btn.innerHTML = '<i data-lucide="save" class="w-4 h-4"></i> Save Mappings';
             btn.classList.remove('bg-emerald-600', 'hover:bg-emerald-500', 'bg-rose-600');
             btn.classList.add('bg-indigo-600', 'hover:bg-indigo-500');
+            lucide.createIcons();
+        }, 2000);
+    }
+
+    async function clearCache() {
+        const btn = document.getElementById('clearCacheBtn');
+        const originalHtml = btn.innerHTML;
+        btn.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> Clearing...';
+        lucide.createIcons();
+        
+        try {
+            const res = await fetch('/b-a-reports/api/clear-cache', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            });
+            if(res.ok) {
+                btn.innerHTML = '<i data-lucide="check" class="w-4 h-4 text-emerald-400"></i> Cleared!';
+            } else {
+                btn.innerHTML = '<i data-lucide="x" class="w-4 h-4 text-rose-400"></i> Error';
+            }
+        } catch(e) {
+            btn.innerHTML = '<i data-lucide="x" class="w-4 h-4 text-rose-400"></i> Error';
+        }
+        
+        lucide.createIcons();
+        setTimeout(() => {
+            btn.innerHTML = originalHtml;
             lucide.createIcons();
         }, 2000);
     }

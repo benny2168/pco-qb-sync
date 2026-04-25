@@ -191,6 +191,41 @@ def fetch_list_details(list_id, pc_client):
         
     return results_data
 
+import time
+def get_cached_list_details(list_id, pc_client):
+    """Fetch list details with a 24-hour file-based cache."""
+    if not list_id:
+        return []
+        
+    cache_path = os.path.join(BASE_DIR, 'data', f'b_a_list_{list_id}.json')
+    
+    # Check if cache exists and is fresh (< 24 hours old)
+    if os.path.exists(cache_path):
+        if time.time() - os.path.getmtime(cache_path) < 86400:
+            cached_data = read_json_with_retries(cache_path)
+            if cached_data is not None:
+                logging.info(f"Using cached data for list {list_id}")
+                return cached_data
+                
+    # Fetch live data
+    logging.info(f"Fetching live data for list {list_id}")
+    data = fetch_list_details(list_id, pc_client)
+    
+    # Save to cache
+    robust_save_file(cache_path, data)
+    return data
+
+def clear_b_a_cache():
+    """Clear all cached list data."""
+    data_dir = os.path.join(BASE_DIR, 'data')
+    if os.path.exists(data_dir):
+        for f in os.listdir(data_dir):
+            if f.startswith('b_a_list_') and f.endswith('.json'):
+                try:
+                    os.remove(os.path.join(data_dir, f))
+                except OSError:
+                    pass
+
 # ---------------------------------------------------------------------------
 # Admin Routes
 # ---------------------------------------------------------------------------
@@ -214,9 +249,17 @@ def api_config():
             config['public_token'] = secrets.token_urlsafe(16)
             
         save_b_a_config(config)
+        clear_b_a_cache() # Clear cache so new lists are fetched immediately
         return jsonify({"success": True, "config": config})
         
     return jsonify(config)
+
+@b_a_bp.route('/api/clear-cache', methods=['POST'])
+@login_required
+@verify_origin
+def api_clear_cache():
+    clear_b_a_cache()
+    return jsonify({"success": True})
 
 @b_a_bp.route('/api/report', methods=['GET'])
 @login_required
@@ -233,8 +276,8 @@ def api_report():
     
     try:
         pc_client = get_pc_client()
-        birthdays = fetch_list_details(bday_list_id, pc_client) if bday_list_id else []
-        anniversaries = fetch_list_details(anniv_list_id, pc_client) if anniv_list_id else []
+        birthdays = get_cached_list_details(bday_list_id, pc_client) if bday_list_id else []
+        anniversaries = get_cached_list_details(anniv_list_id, pc_client) if anniv_list_id else []
         
         return jsonify({
             "birthdays": birthdays,
@@ -266,9 +309,9 @@ def public_page(token):
     try:
         pc_client = get_pc_client()
         if bday_list_id:
-            birthdays = fetch_list_details(bday_list_id, pc_client)
+            birthdays = get_cached_list_details(bday_list_id, pc_client)
         if anniv_list_id:
-            anniversaries = fetch_list_details(anniv_list_id, pc_client)
+            anniversaries = get_cached_list_details(anniv_list_id, pc_client)
     except Exception as e:
         logging.error(f"Failed to fetch public report data: {e}")
         
